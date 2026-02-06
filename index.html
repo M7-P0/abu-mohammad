@@ -43,6 +43,10 @@
     <!-- Header / Navbar -->
     <header class="header">
         <div class="container">
+            <!-- Mobile Menu Toggle -->
+            <button class="menu-toggle" onclick="toggleMobileMenu()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
             <div class="logo">ابو محمد <span>للذبائح</span></div>
             <nav class="nav">
                 <a href="#products" class="nav-btn"><i class="fa-solid fa-sheep"></i> تصفح الحلال</a>
@@ -59,6 +63,24 @@
             <a href="#products" class="btn btn-primary">احجز ذبيحتك</a>
         </div>
     </header>
+
+    <!-- Mobile Navigation Menu (Sidebar) -->
+    <div id="mobileMenu" class="mobile-menu">
+        <div class="mobile-menu-header">
+            <div class="logo">ابو محمد <span>للذبائح</span></div>
+            <button class="close-menu" onclick="toggleMobileMenu()">&times;</button>
+        </div>
+        <div class="mobile-menu-links">
+            <a href="#products" onclick="toggleMobileMenu()"><i class="fa-solid fa-sheep"></i> تصفح الحلال</a>
+            <a href="#about" onclick="toggleMobileMenu()"><i class="fa-solid fa-circle-info"></i> من نحن</a>
+            <a href="javascript:void(0)" onclick="toggleMobileMenu(); openOrdersModal()"><i
+                    class="fa-solid fa-file-invoice"></i> طلباتي</a>
+            <a href="javascript:void(0)" onclick="toggleMobileMenu(); openAuthModal()"><i
+                    class="fa-solid fa-user-circle"></i> دخول العميل</a>
+            <a href="#products" onclick="toggleMobileMenu()" class="btn btn-primary"
+                style="margin-top: 10px; justify-content: center;">احجز ذبيحتك</a>
+        </div>
+    </div>
 
     <!-- Hero Section -->
     <section class="hero reveal">
@@ -532,6 +554,18 @@
         <i class="fa-brands fa-whatsapp"></i>
     </a>
 
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('active');
+
+            if (menu.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = 'auto';
+            }
+        }
+    </script>
     <script src="app.js"></script>
 </body>
 

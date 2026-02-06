@@ -1238,3 +1238,163 @@ body {
         opacity: 1;
     }
 }
+
+/* --- Hamburger Menu & Sidebar Styles --- */
+.menu-toggle {
+    display: none;
+    /* Hidden on Desktop */
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 5px;
+}
+
+.mobile-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    /* Hidden off-screen right */
+    width: 280px;
+    height: 100vh;
+    background: white;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    z-index: 99999;
+    /* Highest priority */
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.mobile-menu.active {
+    right: 0;
+    /* Slide in */
+}
+
+.mobile-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.mobile-menu-header .logo {
+    font-size: 1.4rem;
+    margin: 0;
+    text-align: right;
+}
+
+.close-menu {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #ef4444;
+    cursor: pointer;
+}
+
+.mobile-menu-links {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.mobile-menu-links a {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    text-decoration: none;
+    padding: 10px;
+    border-radius: 8px;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.mobile-menu-links a:hover,
+.mobile-menu-links a:active {
+    background: #f8fafc;
+    color: var(--primary);
+    transform: translateX(-5px);
+}
+
+.mobile-menu-links i {
+    width: 25px;
+    text-align: center;
+    color: var(--primary);
+}
+
+/* --- MOBILE SPECIFIC RULES --- */
+@media (max-width: 768px) {
+
+    /* 1. Header Layout: Hamburger - Logo */
+    .header .container {
+        flex-direction: row;
+        /* Horizontal layout */
+        justify-content: space-between;
+        /* Space them out */
+        align-items: center;
+        padding: 10px 20px;
+        flex-wrap: nowrap;
+    }
+
+    /* 2. Show Hamburger Button */
+    .menu-toggle {
+        display: block;
+    }
+
+    /* 3. Hide ALL Desktop Nav Elements */
+    .nav,
+    .header .btn-primary,
+    #authContainer {
+        display: none !important;
+    }
+
+    /* 4. Global Reset for Spacing */
+    section,
+    .hero,
+    .features-section,
+    .about-section,
+    .services-section {
+        padding-top: 30px !important;
+        padding-bottom: 30px !important;
+    }
+
+    /* 5. Collapse AdSense Gap */
+    .adsense-display-section,
+    .adsense-multiplex-section {
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+    }
+
+    .adsense-display-section .container,
+    .adsense-multiplex-section .container {
+        padding: 0 !important;
+    }
+
+    /* 6. Grids and Modals */
+    .products-grid,
+    .features-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .modal-content {
+        width: 95% !important;
+        margin: 10px auto;
+        padding: 20px 15px;
+    }
+
+    /* 7. Hero Image Fix */
+    .hero {
+        background-position: center bottom !important;
+        min-height: auto;
+    }
+
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+}
