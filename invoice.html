@@ -154,27 +154,33 @@
 
         /* Updated Print Styles */
         @media print {
+            @page {
+                size: A4;
+                margin: 0;
+                /* Remove browser default page margins */
+            }
 
-            body,
-            html {
+            body {
                 margin: 0;
                 padding: 0;
-                background: white;
+                background-color: white;
                 height: 100%;
                 display: block;
-                /* Reset flex */
+                /* Disable flex for print */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .invoice-container {
-                box-shadow: none;
-                width: 100%;
-                max-width: 100%;
-                border-radius: 0;
-                margin: 0;
-                padding: 0;
-                position: absolute;
-                top: 0;
-                left: 0;
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: none !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 20px !important;
+                /* Internal padding for content */
+                border-radius: 0 !important;
             }
 
             .actions-bar {
@@ -182,21 +188,22 @@
             }
 
             .invoice-header {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                background: #2C5F2D !important;
+                background-color: #2C5F2D !important;
                 color: white !important;
-            }
-
-            .watermark {
-                display: none;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .total-box {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                background: #fdfce8 !important;
-                border-color: #fcd34d !important;
+                background-color: #fdfce8 !important;
+                border: 2px dashed #fcd34d !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .watermark {
+                opacity: 0.1 !important;
+                /* Make watermark very faint */
             }
         }
     </style>
@@ -213,6 +220,8 @@
         <div class="watermark">PAID</div>
 
         <div class="invoice-body">
+
+            <div id="loadingMsg" style="text-align: center; color: #6b7280; display: none;">جاري تحميل البيانات...</div>
 
             <div class="info-group">
                 <div class="info-row">
@@ -293,6 +302,11 @@
                 <p style="font-size: 0.8rem; color: #9ca3af; margin-top: 5px;">امسح الكود للتحقق من الطلب</p>
             </div>
 
+            <div id="previewBadge"
+                style="display: none; background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 8px; font-size: 0.8rem; text-align: center; margin-top: 15px; border: 1px dashed #7dd3fc;">
+                ⚠️ هذا عرض تجريبي لأحدث طلب تم تخزينه في جهازك
+            </div>
+
         </div>
 
         <div class="actions-bar" data-html2canvas-ignore="true">
@@ -307,64 +321,97 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Parse URL Parameters
+            // Check params first, then fallback to localStorage for testing
             const urlParams = new URLSearchParams(window.location.search);
             const encodedData = urlParams.get('data');
 
+            let data = null;
+
             if (encodedData) {
                 try {
-                    // Decode Base64 -> JSON
                     const jsonString = decodeURIComponent(escape(atob(encodedData)));
-                    const data = JSON.parse(jsonString);
-
-                    // Fill Data
-                    document.getElementById('orderId').textContent = '#' + (data.id || '---');
-                    document.getElementById('orderDate').textContent = data.timestamp || new Date().toLocaleDateString('ar-SA');
-                    document.getElementById('customerName').textContent = data.customer || '---';
-                    document.getElementById('customerPhone').textContent = data.phone || '---';
-                    document.getElementById('productName').textContent = data.product || '---';
-                    document.getElementById('qty').textContent = data.qty || '1';
-                    document.getElementById('cutting').textContent = data.cutting || '---';
-                    document.getElementById('packaging').textContent = data.plates || '---';
-                    document.getElementById('headOption').textContent = data.head || '---';
-                    document.getElementById('delivery').textContent = data.delivery || '---';
-                    document.getElementById('deliveryDate').textContent = data.date || '---';
-                    document.getElementById('totalPrice').textContent = data.total || '0';
-
-                    if (data.notes) {
-                        document.getElementById('notesRow').style.display = 'flex';
-                        document.getElementById('notes').textContent = data.notes;
-                    }
-
-                    // Generate QR Code (Simple Google API)
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`;
-                    document.getElementById('qrCode').src = qrUrl;
-
-                    // Update Title
-                    document.title = `فاتورة #${data.id} - ${data.customer}`;
-
+                    data = JSON.parse(jsonString);
                 } catch (e) {
-                    console.error("Error parsing data", e);
-                    alert("عذراً، رابط الفاتورة غير صالح.");
+                    console.error("Link parsing error", e);
                 }
             } else {
-                document.querySelector('.invoice-body').innerHTML = '<div style="text-align:center; padding:50px; color:red;">رابط غير صالح</div>';
+                // Fallback: Try to get latest from localStorage
+                const localOrders = localStorage.getItem('myOrders');
+                if (localOrders) {
+                    try {
+                        const orders = JSON.parse(localOrders);
+                        if (orders && orders.length > 0) {
+                            data = orders[0]; // Get most recent
+                            document.getElementById('previewBadge').style.display = 'block';
+                        }
+                    } catch (e) { console.error("Local storage error", e); }
+                }
+            }
+
+            if (data) {
+                populateInvoice(data);
+            } else {
+                // If really no data
+                document.getElementById('loadingMsg').style.display = 'block';
+                document.getElementById('loadingMsg').textContent = "لم يتم العثور على بيانات الفاتورة. يرجى التأكد من الرابط أو إنشاء طلب جديد.";
             }
         });
 
+        function populateInvoice(data) {
+            document.getElementById('orderId').textContent = '#' + (data.id || '---');
+            document.getElementById('orderDate').textContent = data.timestamp || new Date().toLocaleDateString('ar-SA');
+            document.getElementById('customerName').textContent = data.customer || '---';
+            document.getElementById('customerPhone').textContent = data.phone || '---';
+            document.getElementById('productName').textContent = data.product || '---';
+            document.getElementById('qty').textContent = data.qty || '1';
+            document.getElementById('cutting').textContent = data.cutting || '---';
+            document.getElementById('packaging').textContent = data.plates || '---';
+            document.getElementById('headOption').textContent = data.head || '---';
+            document.getElementById('delivery').textContent = data.delivery || '---';
+            document.getElementById('deliveryDate').textContent = data.date || data.timestamp || '---';
+            document.getElementById('totalPrice').textContent = data.total || '0';
+
+            if (data.notes) {
+                document.getElementById('notesRow').style.display = 'flex';
+                document.getElementById('notes').textContent = data.notes;
+            }
+
+            // Update Title
+            document.title = ` فاتورة #${data.id}`;
+
+            // Generate QR Code
+            // If data came from localStorage, URL param isn't there, so QR might just point to base invoice page
+            // Ideally we re-construct the link for the QR
+            const currentPath = window.location.href.split('?')[0];
+            // Encode data again to make a valid QR if someone scans it
+            // Simplify data for QR to keep it small (optional)
+            const jsonString = JSON.stringify(data);
+            const enc = btoa(unescape(encodeURIComponent(jsonString)));
+            const realLink = `${currentPath}?data=${enc}`;
+
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realLink)}`;
+            document.getElementById('qrCode').src = qrUrl;
+        }
+
         function downloadPDF() {
             const element = document.getElementById('invoiceArea');
-            // Options for html2pdf
+            // Hide preview badge for PDF
+            const badge = document.getElementById('previewBadge');
+            if (badge) badge.style.display = 'none';
+
             const opt = {
-                margin: [0, 0, 0, 0], // Zero margins
+                margin: 0,
                 filename: `Invoice_${document.title}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
 
-            // Generate PDF
-            html2pdf().set(opt).from(element).save();
+            // Generate
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore badge if needed
+                if (badge && document.title.includes('تجريبي')) badge.style.display = 'block';
+            });
         }
     </script>
 </body>
