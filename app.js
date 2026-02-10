@@ -467,7 +467,7 @@ function handleFormSubmit(e) {
 
     // تحديد الرابط الأساسي (يعمل سواء محلياً أو على سيرفر)
     const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-    const invoiceUrl = `${window.location.protocol}//${window.location.host}${currentPath}/invoice.html?data=${encodedData}`;
+    const invoiceUrl = `${window.location.protocol}//${window.location.host}${currentPath}/invoice.html?data=${encodeURIComponent(encodedData)}`;
 
     // بناء الرسالة بشكل منسق جداً
     let message = `*طلب حجز جديد 🐑*\n`;
