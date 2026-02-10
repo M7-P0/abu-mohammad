@@ -425,6 +425,7 @@ function handleFormSubmit(e) {
         id: Math.floor(10000 + Math.random() * 90000),
         timestamp: new Date().toLocaleString('en-GB'), // Use English format for Western digits
         customer: name,
+        phone: phone, // Added phone for invoice
         product: product,
         qty: qty,
         total: total,
@@ -433,6 +434,7 @@ function handleFormSubmit(e) {
         plates: platesText,
         head: headText,
         notes: notes,
+        date: date, // Delivery Date
         status: 'pending' // الحالة الافتراضية
     };
     saveOrderLocally(orderData);
@@ -440,6 +442,32 @@ function handleFormSubmit(e) {
     // تغيير حالة الزر
     submitBtn.textContent = 'جاري توجيهك للواتساب...';
     submitBtn.disabled = true;
+
+    // --- إنشاء رابط الفاتورة الإلكترونية ---
+    // نقوم بتشفير البيانات لإرسالها في الرابط
+    const invoicePayload = {
+        id: orderData.id,
+        timestamp: orderData.timestamp,
+        customer: orderData.customer,
+        phone: orderData.phone,
+        product: orderData.product,
+        qty: orderData.qty,
+        total: orderData.total,
+        delivery: orderData.delivery,
+        cutting: orderData.cutting,
+        plates: orderData.plates,
+        head: orderData.head,
+        notes: orderData.notes,
+        date: orderData.date
+    };
+
+    // تشفير البيانات (Base64 Safe for UTF-8)
+    const jsonString = JSON.stringify(invoicePayload);
+    const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+
+    // تحديد الرابط الأساسي (يعمل سواء محلياً أو على سيرفر)
+    const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    const invoiceUrl = `${window.location.protocol}//${window.location.host}${currentPath}/invoice.html?data=${encodedData}`;
 
     // بناء الرسالة بشكل منسق جداً
     let message = `*طلب حجز جديد 🐑*\n`;
@@ -458,7 +486,9 @@ function handleFormSubmit(e) {
     message += `*التاريخ المطلوب:* ${date}\n`;
     message += `*نوع التقطيع:* ${cuttingText}\n`;
     message += `---------------------------\n`;
-    message += `*ملاحظات:* ${notes ? notes : 'لا يوجد'}`;
+    message += `*ملاحظات:* ${notes ? notes : 'لا يوجد'}\n`;
+    message += `---------------------------\n`;
+    message += `📄 *طباعة الفاتورة (PDF):*\n${invoiceUrl}`;
 
     // رابط الواتساب المباشر
     pendingWhatsappUrl = `https://api.whatsapp.com/send?phone=${OWNER_PHONE}&text=${encodeURIComponent(message)}`;
