@@ -291,6 +291,11 @@
                     <span class="info-label">موعد المناسبة:</span>
                     <span class="info-value" id="deliveryDate">---</span>
                 </div>
+                <!-- Delivery Time -->
+                <div class="info-row">
+                    <span class="info-label">وقت التوصيل:</span>
+                    <span class="info-value" id="orderDeliveryTime">---</span>
+                </div>
                 <div class="info-row" id="notesRow" style="display:none;">
                     <span class="info-label">ملاحظات:</span>
                     <span class="info-value" id="notes">---</span>
@@ -375,6 +380,7 @@
             document.getElementById('headOption').textContent = data.head || '---';
             document.getElementById('delivery').textContent = data.delivery || '---';
             document.getElementById('deliveryDate').textContent = data.date || data.timestamp || '---';
+            document.getElementById('orderDeliveryTime').textContent = data.deliveryTime || 'لم يتم التحديد';
             document.getElementById('totalPrice').textContent = data.total || '0';
 
             if (data.notes) {

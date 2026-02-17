@@ -51,14 +51,14 @@
             <nav class="nav">
                 <a href="#products" class="nav-btn"><i class="fa-solid fa-sheep"></i> تصفح الحلال</a>
                 <a href="#about" class="nav-btn"><i class="fa-solid fa-circle-info"></i> من نحن</a>
-                <a href="javascript:void(0)" onclick="openOrdersModal()" class="orders-nav-link nav-btn">
+                <a href="javascript:void(0)" onclick="openTrackingModal()" class="nav-btn"><i
+                        class="fa-solid fa-truck-fast"></i> تتبع طلبك</a>
+                <a href="javascript:void(0)" onclick="openOrdersModal()" class="nav-btn">
                     <i class="fa-solid fa-file-invoice"></i> طلباتي
                 </a>
-                <div id="authContainer">
-                    <a href="javascript:void(0)" onclick="openAuthModal()" class="auth-nav-link nav-btn" id="authBtn">
-                        <i class="fa-solid fa-user-circle"></i> <span id="authBtnText">دخول العميل</span>
-                    </a>
-                </div>
+                <a href="javascript:void(0)" onclick="openAuthModal()" class="nav-btn" id="authBtn">
+                    <i class="fa-solid fa-user-circle"></i> <span id="authBtnText">دخول العميل</span>
+                </a>
             </nav>
             <a href="#products" class="btn btn-primary">احجز ذبيحتك</a>
         </div>
@@ -73,6 +73,8 @@
         <div class="mobile-menu-links">
             <a href="#products" onclick="toggleMobileMenu()"><i class="fa-solid fa-sheep"></i> تصفح الحلال</a>
             <a href="#about" onclick="toggleMobileMenu()"><i class="fa-solid fa-circle-info"></i> من نحن</a>
+            <a href="javascript:void(0)" onclick="toggleMobileMenu(); openTrackingModal()"><i
+                    class="fa-solid fa-truck-fast"></i> تتبع طلبك</a>
             <a href="javascript:void(0)" onclick="toggleMobileMenu(); openOrdersModal()"><i
                     class="fa-solid fa-file-invoice"></i> طلباتي</a>
             <a href="javascript:void(0)" onclick="toggleMobileMenu(); openAuthModal()"><i
@@ -179,21 +181,32 @@
                 <p>ابو محمد يوفر لك افضل الاغنام البلدية فقط</p>
             </div>
 
-            <!-- Categories Filters -->
-            <div class="filters">
-                <button class="filter-btn active" data-filter="all">الكل</button>
-                <button class="filter-btn" data-filter="hari">حري</button>
-                <button class="filter-btn" data-filter="naimi">نعيمي</button>
-                <button class="filter-btn" data-filter="najdi">نجدي</button>
-                <button class="filter-btn" data-filter="tais">تيوس</button>
+            <!-- Suggestion 2: Product Filter Tabs -->
+            <div class="filter-container"
+                style="display: flex; justify-content: center; gap: 10px; margin-bottom: 40px; flex-wrap: wrap;">
+                <button class="filter-btn active" onclick="filterProducts('all')" data-category="all">الكل</button>
+                <button class="filter-btn" onclick="filterProducts('hari')" data-category="hari">حري</button>
+                <button class="filter-btn" onclick="filterProducts('naimi')" data-category="naimi">نعيمي</button>
+                <button class="filter-btn" onclick="filterProducts('tais')" data-category="tais">تيوس</button>
+                <button class="filter-btn" onclick="filterProducts('najdi')" data-category="najdi">نجدي</button>
             </div>
 
             <!-- Products Grid -->
             <div class="products-grid" id="productsGrid">
                 <!-- Products will be injected here by JS -->
             </div>
+        </div>
+    </section>
 
-
+    <!-- AdSense In-Article Ad (Middle) -->
+    <section class="adsense-article-section" style="padding: 20px 0; background: #fff;">
+        <div class="container">
+            <!-- In-Article Ads -->
+            <ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article"
+                data-ad-format="fluid" data-ad-client="ca-pub-2461384535125374" data-ad-slot="2516421453"></ins>
+            <script>
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
         </div>
     </section>
 
@@ -212,34 +225,77 @@
     </section>
 
     <!-- Why Us Section (NEW) -->
-    <section class="features-section reveal" style="background: white; padding: 80px 0; border-top: 1px solid #eee;">
+    <section class="features-section reveal">
         <div class="container">
             <div class="section-title">
                 <h2>لماذا تختار أبو محمد؟</h2>
                 <p>نضمن لك الجودة والأمانة في كل ذبيحة</p>
             </div>
-            <div class="features-grid"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px;">
-                <div class="feature-card"
-                    style="text-align: center; padding: 30px; border-radius: 20px; background: #f9fafb; border: 1px solid #eee; transition: 0.3s;">
-                    <div style="font-size: 3rem; margin-bottom: 20px;">🕋</div>
-                    <h3 style="color: var(--primary); margin-bottom: 15px;">ذبح إسلامي</h3>
-                    <p style="color: var(--text-light); font-size: 0.95rem;">نلتزم بالشريعة الإسلامية في الذبائح مع
-                        إشراف دقيق على النظافة في مسالخ البلدية.</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🕋</div>
+                    <h3>ذبح إسلامي</h3>
+                    <p>نلتزم بالشريعة الإسلامية في الذبائح مع إشراف دقيق على النظافة في مسالخ البلدية.</p>
                 </div>
-                <div class="feature-card"
-                    style="text-align: center; padding: 30px; border-radius: 20px; background: #f9fafb; border: 1px solid #eee; transition: 0.3s;">
-                    <div style="font-size: 3rem; margin-bottom: 20px;">🌾</div>
-                    <h3 style="color: var(--primary); margin-bottom: 15px;">تربية بلدية</h3>
-                    <p style="color: var(--text-light); font-size: 0.95rem;">أغنامنا من المراح مباشرة، تتغذى على البرسيم
-                        والشعير الطبيعي فقط.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">🌾</div>
+                    <h3>تربية بلدية</h3>
+                    <p>أغنامنا من المراح مباشرة، تتغذى على البرسيم والشعير الطبيعي فقط.</p>
                 </div>
-                <div class="feature-card"
-                    style="text-align: center; padding: 30px; border-radius: 20px; background: #f9fafb; border: 1px solid #eee; transition: 0.3s;">
-                    <div style="font-size: 3rem; margin-bottom: 20px;">🛡️</div>
-                    <h3 style="color: var(--primary); margin-bottom: 15px;">أمانة واختيار</h3>
-                    <p style="color: var(--text-light); font-size: 0.95rem;">نختار لك الذبيحة بعناية فائقة، ونضمن لك
-                        الجودة والطعم البلدي الأصيل.</p>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>أمانة واختيار</h3>
+                    <p>نختار لك الذبيحة بعناية فائقة، ونضمن لك الجودة والطعم البلدي الأصيل.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section reveal">
+        <div class="container">
+            <div class="section-title">
+                <h2>الأسئلة الشائعة ❓</h2>
+                <p>كل ما تود معرفته عن خدمات أبو محمد</p>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>وين توصلون؟</span>
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>حالياً نوصل الطلبات لجميع أحياء مدينة الرياض فقط، لضمان وصول الذبيحة طازجة بأسرع وقت.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>كيف نتأكد إن الذبح بلدي وطازج؟</span>
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>الذبح يتم في مسالخ البلدية المعتمدة يوم الطلب نفسه، وتقدر تطلب تصوير الذبيحة أو الكود الخاص
+                            بها لضمان الأمانة.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>هل السعر يشمل الرأس والكراعين؟</span>
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>نعم، جميع الذبائح تشمل الرأس والكراعين كاملة، ويتم تنظيفها وتغليفها بعناية فائقة.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>وش أنواع التغليف المتوفرة؟</span>
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>نوفر تغليفاً في أكياس شفافة قوية، أو تغليفاً في أطباق (بإضافة رسوم بسيطة) لسهولة التخزين في
+                            الثلاجة.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -256,6 +312,25 @@
             <script>
                 (adsbygoogle = window.adsbygoogle || []).push({});
             </script>
+        </div>
+    </section>
+
+    <!-- Reviews Section -->
+    <section class="reviews-section reveal">
+        <div class="container">
+            <div class="section-title">
+                <h2>تجارب عملائنا ⭐</h2>
+                <p>آراء نعتز بها من زوارنا الكرام</p>
+            </div>
+            <div class="reviews-grid" id="reviewsGrid">
+                <!-- Reviews injected by JS -->
+            </div>
+            <div style="text-align: center; margin-top: 50px;">
+                <button class="btn btn-secondary" onclick="openReviewModal()"
+                    style="padding: 12px 40px; border-radius: 50px; font-weight: 700;">
+                    <i class="fa-solid fa-pen-to-square"></i> أضف تقييمك الآن
+                </button>
+            </div>
         </div>
     </section>
 
@@ -292,7 +367,7 @@
         </div>
 
         <div class="footer-bottom">
-            <p>© 2026 ابو محمد للذبائح. جميع الحقوق محفوظة.</p>
+            <p onclick="adminTagClick()" style="cursor: pointer;">© 2026 ابو محمد للذبائح. جميع الحقوق محفوظة.</p>
 
             <!-- Developer Credits -->
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05);">
@@ -337,6 +412,27 @@
                 <div class="form-group">
                     <label for="date">تاريخ المناسبة/التوصيل</label>
                     <input type="date" id="date" required lang="en">
+                </div>
+
+                <div class="form-group">
+                    <label for="deliveryTime">توقيت التوصيل المفضل</label>
+                    <select id="deliveryTime" required>
+                        <option value="" disabled selected>اختر التوقيت المناسب</option>
+                        <option value="morning">الفترة الصباحية (من 9 إلى 12)</option>
+                        <option value="noon">فترة الظهر (من 12 إلى 3)</option>
+                        <option value="afternoon">فترة العصر (من 3 إلى 6)</option>
+                        <option value="evening">فترة المساء (من 6 إلى 9)</option>
+                    </select>
+                </div>
+
+                <div id="locationGroup" class="form-group">
+                    <label for="locationLink">موقع التوصيل (رابط جوجل ماب)</label>
+                    <input type="url" id="locationLink" placeholder="أدخل رابط الموقع من خرائط جوجل">
+                </div>
+
+                <div class="form-group">
+                    <label for="receiptUpload">إرفاق صورة التحويل البنكي (اختياري)</label>
+                    <input type="file" id="receiptUpload" accept="image/*">
                 </div>
 
                 <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 20px;">
@@ -463,7 +559,10 @@
                         <div class="inv-row"><span>المنتج:</span> <strong id="invProduct">--</strong></div>
                         <div class="inv-row"><span>العدد:</span> <strong id="invQty">--</strong></div>
                         <div class="inv-row"><span>طريقة الاستلام:</span> <strong id="invDelivery">--</strong></div>
+                        <div class="inv-row"><span>توقيت التوصيل:</span> <strong id="invTime">--</strong></div>
                         <div class="inv-row"><span>التقطيع:</span> <strong id="invCutting">--</strong></div>
+                        <div class="inv-row"><span>حالة الطلب:</span> <strong id="invStatusLabel"
+                                style="color: #b45309;">--</strong></div>
                         <div class="inv-total">
                             <span>الإجمالي النهائي:</span>
                             <span id="invTotal">0 ر.س</span>
@@ -549,10 +648,268 @@
         </div>
     </div>
 
-    <!-- Floating WhatsApp Button -->
-    <a href="#" id="floatingWhatsapp" class="floating-whatsapp" target="_blank" title="تواصل معنا واتساب">
-        <i class="fa-brands fa-whatsapp"></i>
-    </a>
+    <!-- Owner Dashboard Modal -->
+    <div id="dashboardModal" class="modal">
+        <div class="modal-content dashboard-modal-content" style="max-width: 95%; width: 95%;">
+            <span class="close-modal" onclick="closeDashboardModal()">&times;</span>
+            <div class="modal-header">
+                <h3>لوحة تحكم الطلبات</h3>
+                <p>ملخص طلبات اليوم وجدول التجهيز</p>
+            </div>
+
+            <!-- Suggestion 1: Dashboard Analytics -->
+            <div class="dashboard-stats"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 20px;">
+                <div class="stat-card"
+                    style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 0.85rem; color: #166534; font-weight: 700;">مجموع
+                        المبيعات</span>
+                    <strong id="statTotalSales" style="font-size: 1.4rem; color: var(--primary);">0 ر.س</strong>
+                </div>
+                <div class="stat-card"
+                    style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 0.85rem; color: #1e40af; font-weight: 700;">عدد
+                        الطلبات</span>
+                    <strong id="statTotalOrders" style="font-size: 1.4rem; color: #1d4ed8;">0</strong>
+                </div>
+                <div class="stat-card"
+                    style="background: #fefce8; border: 1px solid #fef08a; padding: 15px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 0.85rem; color: #854d0e; font-weight: 700;">الأكثر
+                        طلباً</span>
+                    <strong id="statTopProduct" style="font-size: 1.1rem; color: #a16207;">--</strong>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn-primary" onclick="window.print()" style="padding: 5px 15px; font-size: 0.9rem;">طباعة
+                    الجدول</button>
+                <button class="btn-secondary" onclick="exportOrdersToCSV()"
+                    style="padding: 5px 15px; font-size: 0.9rem;">تصدير CSV</button>
+            </div>
+
+            <!-- Dashboard Filters -->
+            <div class="dashboard-filters"
+                style="margin-top: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">بحث باسم
+                        العميل أو المنتج</label>
+                    <input type="text" id="dbSearch" oninput="renderDashboardOrders()" placeholder="مثال: محمد، حري..."
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+                </div>
+                <div style="width: 150px;">
+                    <label
+                        style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">الحالة</label>
+                    <select id="dbStatus" onchange="renderDashboardOrders()"
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+                        <option value="all">الكل</option>
+                        <option value="pending">⏳ جاري المعالجة</option>
+                        <option value="preparing">🔪 جاري التجهيز</option>
+                        <option value="delivering">🚚 خرج للتوصيل</option>
+                        <option value="completed">✅ تم التوصيل</option>
+                    </select>
+                </div>
+                <div style="width: 150px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">تاريخ
+                        الطلب</label>
+                    <input type="date" id="dbDate" onchange="renderDashboardOrders()"
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+                </div>
+                <button class="btn-secondary" onclick="resetDashboardFilters()"
+                    style="padding: 8px 15px; font-size: 0.85rem; border: 1px solid #cbd5e1;">إعادة ضبط</button>
+            </div>
+            <div class="dashboard-table-wrapper"
+                style="overflow-x: auto; overflow-y: auto; max-height: 400px; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="dashboard-table"
+                    style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.9rem;">
+                    <thead style="position: sticky; top: 0; z-index: 10;">
+                        <tr style="background: #2C5F2D; color: white;">
+                            <th style="padding: 10px; border: 1px solid #ddd;">رقم الطلب</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">العميل</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">العدد</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">التوقيت</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">التقطيع</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">التغليف</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">اللوكيشن</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">الإيصال</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">الحالة</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">الملصق</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardTableBody">
+                        <!-- Orders will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Product Management Section (Prices & Stock) -->
+            <div class="inventory-section" style="margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 20px;">
+                <div class="modal-header">
+                    <h3>إدارة المنتجات (الأسعار والمخزون)</h3>
+                    <p>عدل الأسعار أو عطل المنتجات التي نفذت كميتها</p>
+                </div>
+                <div class="dashboard-table-wrapper" style="overflow-x: auto; margin-top: 15px;">
+                    <table class="dashboard-table"
+                        style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #b45309; color: white;">
+                                <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">السعر (ر.س)</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">الوزن والعمر</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">الحالة</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productManagementBody">
+                            <!-- Products will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Review Management Section (DASHBOARD) -->
+                <div class="inventory-section"
+                    style="margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 20px;">
+                    <div class="modal-header">
+                        <h3>إدارة وآراء العملاء ⭐</h3>
+                        <p>أضف تقييمات العملاء اللي تجيك في الواتساب لتظهر في الموقع</p>
+                    </div>
+
+                    <!-- Add New Review Form (In Dashboard) -->
+                    <div
+                        style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="adminReviewName" placeholder="اسم العميل"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                            <select id="adminReviewStars"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                                <option value="4">⭐⭐⭐⭐ (4)</option>
+                                <option value="3">⭐⭐⭐ (3)</option>
+                            </select>
+                        </div>
+                        <textarea id="adminReviewText" placeholder="نص التقييم..."
+                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; height: 60px; margin-bottom: 10px;"></textarea>
+                        <button onclick="addNewReviewFromAdmin()" class="btn btn-primary"
+                            style="width: 100%; padding: 10px;">إضافة التقييم للموقع</button>
+                    </div>
+
+                    <div class="dashboard-table-wrapper" style="overflow-x: auto;">
+                        <table class="dashboard-table"
+                            style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: #1B4D21; color: white;">
+                                    <th style="padding: 10px; border: 1px solid #ddd;">العميل</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">التقييم</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">نص الرأي</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReviewsTableBody">
+                                <!-- Reviews will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+
+    <!-- Order Tracking Modal -->
+    <div id="trackingModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeTrackingModal()">&times;</span>
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-truck-fast"></i> تتبع طلبك</h3>
+                <p>أدخل رقم الطلب أو رقم الجوال لمعرفة حالة ذبيحتك</p>
+            </div>
+            <div class="form-group">
+                <input type="text" id="trackInput" placeholder="رقم الطلب (مثلاً: 12345) أو رقم الجوال"
+                    style="width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eee; font-size: 1rem; text-align: center;">
+            </div>
+            <button onclick="trackOrder()" class="btn btn-primary full-width" style="margin-top: 10px;">
+                <i class="fa-solid fa-magnifying-glass"></i> بحث عن الطلب
+            </button>
+
+            <!-- Result Area -->
+            <div id="trackResult" style="margin-top: 30px; display: none;">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeReviewModal()">&times;</span>
+            <div class="modal-header">
+                <h3>شاركنا رأيك ✨</h3>
+                <p>كلماتك تسعدنا وتطور خدماتنا</p>
+            </div>
+            <form id="reviewForm" onsubmit="submitReview(event)">
+                <div class="form-group" style="text-align: center; margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 15px;">تقييمك</label>
+                    <div class="rate-stars"
+                        style="font-size: 2rem; color: #ddd; display: flex; justify-content: center; gap: 10px; cursor: pointer;">
+                        <i class="fa-solid fa-star" data-value="1" onclick="setRating(1)"></i>
+                        <i class="fa-solid fa-star" data-value="2" onclick="setRating(2)"></i>
+                        <i class="fa-solid fa-star" data-value="3" onclick="setRating(3)"></i>
+                        <i class="fa-solid fa-star" data-value="4" onclick="setRating(4)"></i>
+                        <i class="fa-solid fa-star" data-value="5" onclick="setRating(5)"></i>
+                    </div>
+                    <input type="hidden" id="reviewRating" value="5">
+                </div>
+                <div class="form-group">
+                    <label>الاسم</label>
+                    <input type="text" id="reviewName" required placeholder="مثال: صالح العتيبي">
+                </div>
+                <div class="form-group">
+                    <label>رأيك في الخدمة والذبيحة</label>
+                    <textarea id="reviewComment" required placeholder="اكتب رأيك هنا..."
+                        style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ddd; min-height: 100px; font-family: inherit;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary full-width" style="margin-top: 15px;">
+                    <i class="fa-brands fa-whatsapp"></i> إرسال التقييم عبر واتساب
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden Label for Printing -->
+    <div id="printLabelContainer" style="display:none;"></div>
+
+    <script>
+        let clickCount = 0;
+        function adminTagClick() {
+            clickCount++;
+            if (clickCount >= 3) {
+                const pin = prompt("أدخل الرمز السري للدخول إلى لوحة التحكم:");
+                if (pin === "1409") {
+                    openDashboardModal();
+                } else if (pin !== null) {
+                    alert("الرمز السري غير صحيح!");
+                }
+                clickCount = 0;
+            }
+            setTimeout(() => clickCount = 0, 2000);
+        }
+
+        // Toggle location link based on delivery type
+        document.addEventListener('DOMContentLoaded', () => {
+            const deliveryType = document.getElementById('deliveryType');
+            const locationGroup = document.getElementById('locationGroup');
+            if (deliveryType && locationGroup) {
+                deliveryType.addEventListener('change', () => {
+                    locationGroup.style.display = deliveryType.value === 'delivery' ? 'block' : 'none';
+                });
+                // Initial check
+                locationGroup.style.display = deliveryType.value === 'delivery' ? 'block' : 'none';
+            }
+        });
+    </script>
 
     <script>
         function toggleMobileMenu() {
@@ -566,6 +923,11 @@
             }
         }
     </script>
+    <!-- Floating WhatsApp Button -->
+    <a href="https://wa.me/966530382226" class="whatsapp-float" target="_blank">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
     <script src="app.js"></script>
 </body>
 
