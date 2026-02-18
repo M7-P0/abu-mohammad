@@ -1,5 +1,39 @@
 const OWNER_PHONE = "966530382226"; // رقم عميل (ابو محمد)
 
+// --- Firebase Configuration ---
+const firebaseConfig = {
+    apiKey: "AIzaSyHzzmvY9J9lhoAq2kjfjVu8E73B6Y2Q6zs",
+    authDomain: "abu-mohammed-store.firebaseapp.com",
+    projectId: "abu-mohammed-store",
+    databaseURL: "https://abu-mohammed-store-default-rtdb.firebaseio.com/",
+    storageBucket: "abu-mohammed-store.firebasestorage.app",
+    messagingSenderId: "136977820798",
+    appId: "1:136977820798:web:288e479ad066bc85d4bc2f",
+    measurementId: "G-ZN33MBT4RD"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Test Connection & UI Indicator
+const statusDot = document.createElement('div');
+statusDot.id = 'firebase-status';
+statusDot.style = "position:fixed; top:10px; left:10px; width:12px; height:12px; border-radius:50%; background:gray; z-index:9999; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);";
+document.body.appendChild(statusDot);
+
+db.ref(".info/connected").on("value", (snap) => {
+    if (snap.val() === true) {
+        console.log("Connected to Firebase Database! ✅");
+        statusDot.style.background = "#22c55e"; // Green
+        statusDot.title = "متصل بالسحاب ✅";
+    } else {
+        console.log("Disconnected from Firebase Database ❌");
+        statusDot.style.background = "#ef4444"; // Red
+        statusDot.title = "غير متصل ❌";
+    }
+});
+
 const defaultProducts = [
     { id: 1, name: "حري لباني", category: "hari", price: 1350, weight: "10-12 كجم", age: "3-4 شهور", inStock: true, image: "images/1.jpg", backup: "https://images.unsplash.com/photo-1484557985045-6f5e98487c9d?q=80&w=400&fit=crop" },
     { id: 2, name: "حري جذع", category: "hari", price: 1650, weight: "18-20 كجم", age: "6 شهور", inStock: true, image: "images/2.jpg", backup: "https://images.unsplash.com/photo-1484557985045-6f5e98487c9d?q=80&w=400&fit=crop" },
@@ -11,7 +45,40 @@ const defaultProducts = [
     { id: 8, name: "نجدي هرفي", category: "najdi", price: 1950, weight: "18-22 كجم", age: "6 شهور", inStock: true, image: "images/8.jpg", backup: "https://source.unsplash.com/400x300/?black-sheep" }
 ];
 
-let currentProducts = JSON.parse(localStorage.getItem('appProducts')) || defaultProducts;
+let currentProducts = defaultProducts;
+
+// --- Realtime Sync ---
+function syncData() {
+    // 1. Sync Products
+    db.ref('products').on('value', (snapshot) => {
+        console.log("Products Sync Received 📦");
+        const data = snapshot.val();
+        if (data) {
+            currentProducts = Object.values(data);
+            renderProducts(currentProducts);
+            if (typeof updateDashboardStats === 'function') updateDashboardStats();
+        } else {
+            console.log("No products in DB, seeding defaults...");
+            defaultProducts.forEach(p => db.ref('products/' + p.id).set(p));
+        }
+    }, (error) => {
+        console.error("Firebase Sync Error (Products):", error);
+        alert("خطأ في الاتصال بقاعدة البيانات (المنتجات): " + error.message);
+    });
+
+    // 2. Sync Reviews
+    db.ref('reviews').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            currentReviews = Object.values(data);
+            renderReviews();
+        } else {
+            defaultReviews.forEach(r => db.ref('reviews/' + r.id).set(r));
+        }
+    }, (error) => {
+        console.error("Firebase Sync Error (Reviews):", error);
+    });
+}
 
 const defaultReviews = [
     { id: 1, name: "أبو فهد", text: "ما شاء الله تبارك الله، اللحم طري وطعم بلدي حقيقي. التوصيل كان في الموعد والتغليف جداً نظيف.", stars: 5, tag: "عميل دائم" },
@@ -35,6 +102,7 @@ const productNameInput = document.getElementById('productName');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    syncData(); // Start Firebase Sync
     injectMTechAds();
     renderProducts(currentProducts);
     renderReviews();
@@ -535,29 +603,53 @@ async function handleFormSubmit(e) {
 
 // Logic for Orders/Invoices
 function saveOrderLocally(order) {
+    // 1. Save to Firebase (for the owner)
+    const orderRef = db.ref('orders').push();
+    order.dbId = orderRef.key; // Store the unique FB key
+
+    orderRef.set(order)
+        .then(() => console.log("Order saved to Firebase successfully! ✅"))
+        .catch((error) => {
+            console.error("Error saving order to Firebase:", error);
+            alert("خطأ: لم يتم إرسال الطلب للسحابة. يرجى التأكد من الإنترنت أو إعدادات القاعدة.");
+        });
+
+    // 2. Keep a local list for the customer's "My Orders" tab
     let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    orders.unshift(order); // Add to beginning
+    orders.unshift(order);
     localStorage.setItem('myOrders', JSON.stringify(orders));
 }
 
 function deleteOrder(orderId, event) {
-    if (event) event.stopPropagation(); // Prevent opening invoice
+    if (event) event.stopPropagation();
     if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
 
+    // Delete locally
     let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+    const localOrder = orders.find(o => o.id === orderId);
     orders = orders.filter(o => o.id !== orderId);
     localStorage.setItem('myOrders', JSON.stringify(orders));
+
+    // Delete from Firebase if we have the ID
+    if (localOrder && localOrder.dbId) {
+        db.ref('orders/' + localOrder.dbId).remove();
+    }
+
     renderOrdersList();
 }
 
 function markAsCompleted(orderId) {
-    let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    const orderIndex = orders.findIndex(o => o.id === orderId);
-    if (orderIndex > -1) {
-        orders[orderIndex].status = 'completed';
-        localStorage.setItem('myOrders', JSON.stringify(orders));
-        alert('تم تحديث حالة الطلب إلى مكتمل ✅');
-        viewInvoice(orderId); // Refresh view
+    // This is typically called from the dashboard
+    db.ref('orders').orderByChild('id').equalTo(orderId).once('value', (snapshot) => {
+        snapshot.forEach((child) => {
+            child.ref.update({ status: 'completed' });
+        });
+    });
+}
+
+function updateOrderStatus(dbId, newStatus) {
+    if (dbId) {
+        db.ref('orders/' + dbId).update({ status: newStatus });
     }
 }
 
@@ -761,12 +853,18 @@ window.showOrdersList = showOrdersList;
 function openDashboardModal() {
     document.getElementById('dashboardModal').classList.add('active');
     document.body.style.overflow = 'hidden';
-    renderDashboard();
-    updateDashboardStats(); // Refresh stats
+
+    // Listen for orders changes to keep dashboard live
+    db.ref('orders').on('value', (snapshot) => {
+        const data = snapshot.val();
+        const allOrders = data ? Object.values(data).reverse() : [];
+        renderDashboard(allOrders);
+        updateDashboardStats(allOrders);
+    });
 }
 
-function updateDashboardStats() {
-    const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+function updateDashboardStats(orders) {
+    if (!orders) orders = [];
 
     // Fix: Parse total as number properly
     const totalSales = orders.reduce((sum, o) => {
@@ -807,15 +905,27 @@ function closeDashboardModal() {
     document.body.style.overflow = 'auto';
 }
 
-function renderDashboard() {
-    renderDashboardOrders();
-    renderDashboardProducts();
+function renderDashboard(ordersData) {
+    renderDashboardOrders(ordersData);
+    renderDashboardProducts(); // Products already synced globally
     renderDashboardReviews();
 }
 
-function renderDashboardOrders() {
+function renderDashboardOrders(filteredOrders) {
     const tbody = document.getElementById('dashboardTableBody');
-    let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
+    // If filteredOrders not provided (e.g. from filter change), fetch from Firebase (cached in local logic)
+    // But since the listener calls renderDashboard, we usually have it.
+
+    if (!filteredOrders) {
+        db.ref('orders').once('value', (snapshot) => {
+            const data = snapshot.val();
+            const orders = data ? Object.values(data).reverse() : [];
+            renderDashboardOrders(orders);
+        });
+        return;
+    }
+
+    let orders = filteredOrders;
 
     // Read Filters
     const searchTerm = document.getElementById('dbSearch')?.value.toLowerCase() || '';
@@ -863,17 +973,17 @@ function renderDashboardOrders() {
                     ${order.deliveryLocation ? `<a href="${order.deliveryLocation}" target="_blank" style="color:blue;">فتح الخريطة</a>` : 'لا يوجد'}
                 </td>
                 <td style="padding:10px; border:1px solid #ddd;">
-                    ${order.bankReceipt ? `<button onclick="showReceipt('${order.id}')" style="background:#2C5F2D; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">عرض</button>` : 'لا يوجد'}
+                    ${order.bankReceipt ? `<button onclick="showReceipt('${order.dbId}')" style="background:#2C5F2D; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">عرض</button>` : 'لا يوجد'}
                 </td>
                 <td style="padding:10px; border:1px solid #ddd;">
-                    <select onchange="updateOrderStatus('${order.id}', this.value)" style="padding:4px; border-radius:4px; font-size:0.8rem; width:100%; border:1px solid #ccc;">
+                    <select onchange="updateOrderStatus('${order.dbId}', this.value)" style="padding:4px; border-radius:4px; font-size:0.8rem; width:100%; border:1px solid #ccc;">
                         ${Object.entries(statusOptions).map(([val, text]) => `
                             <option value="${val}" ${order.status === val ? 'selected' : ''}>${text}</option>
                         `).join('')}
                     </select>
                 </td>
                 <td style="padding:10px; border:1px solid #ddd;">
-                    <button onclick="printOrderLabel('${order.id}')" style="background:#b45309; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">
+                    <button onclick="printOrderLabel('${order.dbId}')" style="background:#b45309; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">
                         <i class="fa-solid fa-print"></i> ملصق
                     </button>
                 </td>
@@ -928,57 +1038,41 @@ function renderDashboardProducts() {
 function toggleStock(productId) {
     const index = currentProducts.findIndex(p => p.id === productId);
     if (index !== -1) {
-        currentProducts[index].inStock = !currentProducts[index].inStock;
-        localStorage.setItem('appProducts', JSON.stringify(currentProducts));
-        renderProducts(currentProducts);
-        renderDashboard();
+        const newStatus = !currentProducts[index].inStock;
+        db.ref('products/' + productId).update({ inStock: newStatus });
     }
 }
 
 function updateProductPrice(productId, newPrice) {
-    const index = currentProducts.findIndex(p => p.id === productId);
-    if (index !== -1) {
-        currentProducts[index].price = parseInt(newPrice) || currentProducts[index].price;
-        localStorage.setItem('appProducts', JSON.stringify(currentProducts));
-        renderProducts(currentProducts);
+    const price = parseInt(newPrice);
+    if (!isNaN(price)) {
+        db.ref('products/' + productId).update({ price: price });
     }
 }
 
 function updateProductWeight(productId, newWeight) {
-    const index = currentProducts.findIndex(p => p.id === productId);
-    if (index !== -1) {
-        currentProducts[index].weight = newWeight || currentProducts[index].weight;
-        localStorage.setItem('appProducts', JSON.stringify(currentProducts));
-        renderProducts(currentProducts);
-    }
+    db.ref('products/' + productId).update({ weight: newWeight });
 }
 
 function updateProductAge(productId, newAge) {
-    const index = currentProducts.findIndex(p => p.id === productId);
-    if (index !== -1) {
-        currentProducts[index].age = newAge || currentProducts[index].age;
-        localStorage.setItem('appProducts', JSON.stringify(currentProducts));
-        renderProducts(currentProducts);
+    db.ref('products/' + productId).update({ age: newAge });
+}
+
+function updateOrderStatus(dbId, newStatus) {
+    if (dbId) {
+        db.ref('orders/' + dbId).update({ status: newStatus })
+            .then(() => alert("تم تحديث حالة الطلب بنجاح! ✅"));
     }
 }
 
-function updateOrderStatus(orderId, newStatus) {
-    let orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    const index = orders.findIndex(o => o.id == orderId);
-    if (index !== -1) {
-        orders[index].status = newStatus;
-        localStorage.setItem('myOrders', JSON.stringify(orders));
-        alert("تم تحديث حالة الطلب بنجاح!");
-    }
-}
+function printOrderLabel(dbId) {
+    db.ref('orders/' + dbId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (!order) return;
 
-function printOrderLabel(orderId) {
-    const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    const order = orders.find(o => o.id == orderId);
-    if (!order) return;
-
-    const labelContainer = document.getElementById('printLabelContainer');
-    labelContainer.innerHTML = `
+        const labelContainer = document.getElementById('printLabelContainer');
+        if (!labelContainer) return;
+        labelContainer.innerHTML = `
         <div class="order-label" style="width: 80mm; padding: 10px; border: 2px solid #000; text-align: center; direction: rtl; font-family: 'Arial', sans-serif;">
             <div style="font-size: 1.2rem; font-weight: 800; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px;">
                 اسم العميل: ${order.customer}
@@ -1000,44 +1094,49 @@ function printOrderLabel(orderId) {
         </div>
     `;
 
-    const labelContent = labelContainer.innerHTML;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>ملصق طلب #' + order.id + '</title>');
-    printWindow.document.write('<style>@page { size: auto; margin: 0; } body { margin: 0; padding: 10px; display: flex; justify-content: center; align-items: flex-start; } .order-label { page-break-inside: avoid; }</style>');
-    printWindow.document.write('</head><body onload="window.print(); window.close();">');
-    printWindow.document.write(labelContent);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
+        const labelContent = labelContainer.innerHTML;
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>ملصق طلب #' + order.id + '</title>');
+        printWindow.document.write('<style>@page { size: auto; margin: 0; } body { margin: 0; padding: 10px; display: flex; justify-content: center; align-items: flex-start; } .order-label { page-break-inside: avoid; }</style>');
+        printWindow.document.write('</head><body onload="window.print(); window.close();">');
+        printWindow.document.write(labelContent);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+    });
 }
 
-function showReceipt(orderId) {
-    const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    const order = orders.find(o => o.id == orderId);
-    if (order && order.bankReceipt) {
-        const win = window.open();
-        win.document.write('<img src="' + order.bankReceipt + '" style="max-width:100%;">');
-    }
+function showReceipt(dbId) {
+    db.ref('orders/' + dbId).once('value', (snapshot) => {
+        const order = snapshot.val();
+        if (order && order.bankReceipt) {
+            const win = window.open();
+            win.document.write('<img src="' + order.bankReceipt + '" style="max-width:100%;">');
+        }
+    });
 }
 
 function exportOrdersToCSV() {
-    const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    if (orders.length === 0) return;
+    db.ref('orders').once('value', (snapshot) => {
+        const data = snapshot.val();
+        const orders = data ? Object.values(data) : [];
+        if (orders.length === 0) return;
 
-    let csv = "\uFEFF"; // BOM for Arabic
-    csv += "رقم الطلب,العميل,المنتج,العدد,تاريخ التوصيل,الوقت,التقطيع,التغليف,الموقع,الإجمالي\n";
+        let csv = "\uFEFF"; // BOM for Arabic
+        csv += "رقم الطلب,العميل,المنتج,العدد,تاريخ التوصيل,الوقت,التقطيع,التغليف,الموقع,الإجمالي\n";
 
-    orders.forEach(o => {
-        csv += `${o.id},${o.customer},${o.product},${o.qty},${o.date},${order.deliveryTime},${o.cutting},${o.plates},${o.deliveryLocation},${o.total}\n`;
+        orders.forEach(o => {
+            csv += `${o.id},${o.customer},${o.product},${o.qty},${o.date},${o.deliveryTime || ''},${o.cutting},${o.plates},${o.deliveryLocation || ''},${o.total}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "orders_report_" + new Date().toLocaleDateString() + ".csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "orders_report_" + new Date().toLocaleDateString() + ".csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 
 function openReviewModal() {
@@ -1186,94 +1285,100 @@ function trackOrder() {
         return;
     }
 
-    const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
-    const order = orders.find(o => o.id == input || o.phone == input);
-
-    if (!order) {
-        resultDiv.style.display = 'block';
-        resultDiv.innerHTML = `
-            <div style="text-align: center; color: #EF4444; padding: 20px;">
-                <i class="fa-solid fa-circle-exclamation" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                <p>عذراً، لم يتم العثور على طلب بهذا الرقم. تأكد من الرقم وحاول مرة أخرى.</p>
-            </div>
-        `;
-        return;
-    }
-
-    // Status definitions
-    const statuses = {
-        'pending': { label: 'جاري المعالجة', color: '#64748b', icon: 'fa-clock', step: 1 },
-        'preparing': { label: 'جاري الذبح والتجهيز', color: '#b45309', icon: 'fa-knife-kitchen', step: 2 },
-        'delivering': { label: 'جاري التوصيل الآن', color: '#1d4ed8', icon: 'fa-truck-ramp-box', step: 3 },
-        'completed': { label: 'تم التسليم بنجاح', color: '#15803d', icon: 'fa-check-double', step: 4 },
-        'cancelled': { label: 'تم إلغاء الطلب', color: '#b91c1c', icon: 'fa-circle-xmark', step: 0 }
-    };
-
-    const currentStatus = statuses[order.status] || statuses['pending'];
-
+    // Use loading state
     resultDiv.style.display = 'block';
-    resultDiv.innerHTML = `
-        <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span style="font-weight: 800; color: var(--primary);">طلب رقم #${order.id}</span>
-                <span style="background: ${currentStatus.color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
-                    ${currentStatus.label}
-                </span>
-            </div>
-            
-            <!-- Progress Bar -->
-            ${order.status !== 'cancelled' ? `
-            <div style="padding: 0 10px; margin-bottom: 40px;">
-                <div style="display: flex; justify-content: space-between; position: relative;">
-                    <!-- Track Lines -->
-                    <div style="position: absolute; top: 18px; right: 0; left: 0; height: 6px; background: #e2e8f0; z-index: 1; border-radius: 10px;"></div>
-                    <div style="position: absolute; top: 18px; right: 0; width: ${((currentStatus.step - 1) / 3) * 100}%; height: 6px; background: #1B4D21; z-index: 2; transition: width 1s ease; border-radius: 10px;"></div>
-                    
-                    <!-- Step 1 -->
-                    <div style="z-index: 3; text-align: center; width: 60px;">
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 1 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <i class="fa-solid fa-file-invoice" style="font-size: 0.9rem;"></i>
-                        </div>
-                        <span style="font-size: 0.75rem; color: ${currentStatus.step >= 1 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">طلب</span>
-                    </div>
+    resultDiv.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> جاري البحث عن الطلب...</div>';
 
-                    <!-- Step 2 -->
-                    <div style="z-index: 3; text-align: center; width: 60px;">
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 2 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <i class="fa-solid fa-utensils" style="font-size: 0.9rem;"></i>
-                        </div>
-                        <span style="font-size: 0.75rem; color: ${currentStatus.step >= 2 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">تجهيز</span>
-                    </div>
+    // Search in Firebase by ID or Phone
+    db.ref('orders').once('value', (snapshot) => {
+        const data = snapshot.val();
+        const orders = data ? Object.values(data) : [];
+        const order = orders.find(o => o.id == input || o.phone == input);
 
-                    <!-- Step 3 -->
-                    <div style="z-index: 3; text-align: center; width: 60px;">
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 3 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <i class="fa-solid fa-truck" style="font-size: 0.9rem;"></i>
-                        </div>
-                        <span style="font-size: 0.75rem; color: ${currentStatus.step >= 3 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">توصيل</span>
-                    </div>
+        if (!order) {
+            resultDiv.innerHTML = `
+                <div style="text-align: center; color: #EF4444; padding: 20px;">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>عذراً، لم يتم العثور على طلب بهذا الرقم. تأكد من الرقم وحاول مرة أخرى.</p>
+                </div>
+            `;
+            return;
+        }
 
-                    <!-- Step 4 -->
-                    <div style="z-index: 3; text-align: center; width: 60px;">
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 4 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <i class="fa-solid fa-house-chimney-check" style="font-size: 0.9rem;"></i>
+        // Status definitions
+        const statuses = {
+            'pending': { label: 'جاري المعالجة', color: '#64748b', icon: 'fa-clock', step: 1 },
+            'preparing': { label: 'جاري الذبح والتجهيز', color: '#b45309', icon: 'fa-knife-kitchen', step: 2 },
+            'delivering': { label: 'جاري التوصيل الآن', color: '#1d4ed8', icon: 'fa-truck-ramp-box', step: 3 },
+            'completed': { label: 'تم التسليم بنجاح', color: '#15803d', icon: 'fa-check-double', step: 4 },
+            'cancelled': { label: 'تم إلغاء الطلب', color: '#b91c1c', icon: 'fa-circle-xmark', step: 0 }
+        };
+
+        const currentStatus = statuses[order.status] || statuses['pending'];
+
+        resultDiv.innerHTML = `
+            <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <span style="font-weight: 800; color: var(--primary);">طلب رقم #${order.id}</span>
+                    <span style="background: ${currentStatus.color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+                        ${currentStatus.label}
+                    </span>
+                </div>
+                
+                <!-- Progress Bar -->
+                ${order.status !== 'cancelled' ? `
+                <div style="padding: 0 10px; margin-bottom: 40px;">
+                    <div style="display: flex; justify-content: space-between; position: relative;">
+                        <!-- Track Lines -->
+                        <div style="position: absolute; top: 18px; right: 0; left: 0; height: 6px; background: #e2e8f0; z-index: 1; border-radius: 10px;"></div>
+                        <div style="position: absolute; top: 18px; right: 0; width: ${((currentStatus.step - 1) / 3) * 100}%; height: 6px; background: #1B4D21; z-index: 2; transition: width 1s ease; border-radius: 10px;"></div>
+                        
+                        <!-- Step 1 -->
+                        <div style="z-index: 3; text-align: center; width: 60px;">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 1 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <i class="fa-solid fa-file-invoice" style="font-size: 0.9rem;"></i>
+                            </div>
+                            <span style="font-size: 0.75rem; color: ${currentStatus.step >= 1 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">طلب</span>
                         </div>
-                        <span style="font-size: 0.75rem; color: ${currentStatus.step >= 4 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">استلام</span>
+
+                        <!-- Step 2 -->
+                        <div style="z-index: 3; text-align: center; width: 60px;">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 2 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <i class="fa-solid fa-utensils" style="font-size: 0.9rem;"></i>
+                            </div>
+                            <span style="font-size: 0.75rem; color: ${currentStatus.step >= 2 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">تجهيز</span>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div style="z-index: 3; text-align: center; width: 60px;">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 3 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <i class="fa-solid fa-truck" style="font-size: 0.9rem;"></i>
+                            </div>
+                            <span style="font-size: 0.75rem; color: ${currentStatus.step >= 3 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">توصيل</span>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div style="z-index: 3; text-align: center; width: 60px;">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; background: ${currentStatus.step >= 4 ? '#1B4D21' : '#e2e8f0'}; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <i class="fa-solid fa-house-chimney-check" style="font-size: 0.9rem;"></i>
+                            </div>
+                            <span style="font-size: 0.75rem; color: ${currentStatus.step >= 4 ? '#1B4D21' : '#94a3b8'}; font-weight: 700; display: block;">استلام</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            ` : ''}
+                ` : ''}
 
-            <div style="border-top: 1px dashed #cbd5e1; padding-top: 15px; font-size: 0.9rem;">
-                <p style="margin-bottom: 5px;"><strong>الذبيحة:</strong> ${order.product}</p>
-                <p style="margin-bottom: 5px;"><strong>العدد:</strong> ${order.qty}</p>
-                <p style="margin-bottom: 5px;"><strong>موعد التوصيل:</strong> ${order.date} | ${order.deliveryTime}</p>
-                <p style="margin-top: 10px; color: ${currentStatus.color}; font-weight: 800; font-size: 1rem;">
-                    <i class="fa-solid ${currentStatus.icon}"></i> ${currentStatus.label}
-                </p>
+                <div style="border-top: 1px dashed #cbd5e1; padding-top: 15px; font-size: 0.9rem;">
+                    <p style="margin-bottom: 5px;"><strong>الذبيحة:</strong> ${order.product}</p>
+                    <p style="margin-bottom: 5px;"><strong>العدد:</strong> ${order.qty}</p>
+                    <p style="margin-bottom: 5px;"><strong>موعد التوصيل:</strong> ${order.date} | ${order.deliveryTime}</p>
+                    <p style="margin-top: 10px; color: ${currentStatus.color}; font-weight: 800; font-size: 1rem;">
+                        <i class="fa-solid ${currentStatus.icon}"></i> ${currentStatus.label}
+                    </p>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    });
 }
 
 window.viewInvoice = viewInvoice;
