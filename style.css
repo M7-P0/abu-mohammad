@@ -267,11 +267,26 @@ body {
     background-position: center 30%;
     background-attachment: fixed;
     color: white;
-    padding: 200px 0 120px;
+    padding: 180px 0 100px; /* Increased top padding for desktop */
     text-align: center;
     position: relative;
     border-bottom: 4px solid var(--accent);
     /* خط ذهبي بدلاً من الميلان */
+}
+
+@media (max-width: 768px) {
+    .header {
+        top: 40px;
+    }
+    .hero {
+        padding: 160px 0 80px; /* More space for mobile header+ticker */
+    }
+    .hero h1 {
+        font-size: 2.2rem; /* Smaller font for mobile */
+    }
+    .hero h1 span {
+        font-size: 1.8rem;
+    }
 }
 
 .hero-overlay {
@@ -615,7 +630,7 @@ body {
     background-color: rgba(10, 47, 17, 0.4);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    z-index: 2000;
+    z-index: 99999;
     align-items: center;
     /* سنتر عمودي */
     justify-content: center;
@@ -1356,7 +1371,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 99999;
 }
 
 .overlay.hidden {
@@ -1821,4 +1836,66 @@ html {
 .faq-item.active .faq-answer {
     padding-bottom: 20px;
     max-height: 200px;
+}
+/* Dashboard Premium Styling */
+.tab-btn { padding: 10px 20px; border: none; background: none; font-weight: 700; cursor: pointer; color: #64748b; transition: 0.3s; border-bottom: 3px solid transparent; }
+.tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+.tab-btn:hover { background: #f1f5f9; }
+
+/* Toggle Switch */
+.switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+.switch .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #059669; }
+input:checked + .slider:before { transform: translateX(22px); }
+
+.tab-content { animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Ultra-Premium Mobile Navigation */
+.mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); display: none; justify-content: space-around; align-items: center; z-index: 1000; border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -10px 25px rgba(0,0,0,0.05); padding-bottom: safe-area-inset-bottom; }
+@media (max-width: 768px) { .mobile-bottom-nav { display: flex; } body { padding-bottom: 80px; } .header .btn-primary { display: none; } }
+.mobile-nav-item { text-decoration: none; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 700; transition: 0.3s; flex: 1; }
+.mobile-nav-item i { font-size: 1.2rem; }
+.mobile-nav-item.active { color: var(--primary); }
+.nav-center-btn { width: 55px; height: 55px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -35px; box-shadow: 0 10px 20px rgba(27, 77, 33, 0.3); border: 4px solid white; font-size: 1.4rem; }
+
+/* Smooth Category Scroll on Mobile */
+@media (max-width: 768px) { .filter-container { overflow-x: auto; white-space: nowrap; justify-content: flex-start !important; padding: 10px 5px; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: white; position: sticky; top: 70px; z-index: 100; margin: 0 -20px 30px; padding: 10px 20px; } .filter-container::-webkit-scrollbar { display: none; } .filter-btn { flex: 0 0 auto; padding: 8px 18px; font-size: 0.9rem; } }
+
+/* Ultra-Premium Product Cards & Grid on Mobile */
+@media (max-width: 480px) {
+  .products-grid { grid-template-columns: 1fr; gap: 15px; padding: 0 5px; }
+  .product-card { display: flex; flex-direction: row; height: 160px; padding: 0; overflow: hidden; border-radius: 12px; }
+  .product-image-wrapper { width: 35%; height: 100%; }
+  .product-image { height: 100%; object-fit: cover; }
+  .product-info { width: 65%; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; }
+  .product-title { font-size: 1rem; margin-bottom: 2px; }
+  .product-price { font-size: 1.1rem; color: var(--primary); font-weight: 800; }
+  .product-details { margin-bottom: 8px; gap: 4px; }
+  .badge { padding: 2px 6px; font-size: 0.65rem; }
+  .btn.full-width { padding: 8px; font-size: 0.85rem; border-radius: 8px; }
+}
+
+/* App-like Interactions */
+@keyframes navBubble { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+.mobile-nav-item:active i { animation: navBubble 0.3s ease; }
+
+.modal-content { transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
+@media (max-width: 768px) { .modal { align-items: flex-end; } .modal-content { width: 100% !important; max-width: 100% !important; border-radius: 25px 25px 0 0 !important; transform: translateY(100%); animation: none !important; padding-bottom: 90px !important; } .modal.active .modal-content { transform: translateY(0); } }
+
+/* Adjust Floating WhatsApp for Mobile Bottom Nav */
+@media (max-width: 768px) {
+    .whatsapp-float {
+        bottom: 95px !important;
+        right: 20px !important;
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 25px !important;
+    }
+}
+
+/* Ramadan Promo Modal Style */
+.promo-modal-content { border: 2px solid #D4AF37 !important; box-shadow: 0 0 30px rgba(212, 175, 55, 0.3) !important; }
+@media (max-width: 768px) {
+  .promo-modal-content { margin-bottom: 0 !important; border-radius: 25px 25px 0 0 !important; }
 }

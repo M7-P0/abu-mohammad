@@ -63,7 +63,6 @@ function syncData() {
         }
     }, (error) => {
         console.error("Firebase Sync Error (Products):", error);
-        alert("خطأ في الاتصال بقاعدة البيانات (المنتجات): " + error.message);
     });
 
     // 2. Sync Reviews
@@ -78,7 +77,77 @@ function syncData() {
     }, (error) => {
         console.error("Firebase Sync Error (Reviews):", error);
     });
+
+    // 3. Sync Store Status
+    db.ref('storeStatus').on('value', (snapshot) => {
+        const status = snapshot.val();
+        if (status !== null) {
+            updateStoreUI(status);
+        } else {
+            db.ref('storeStatus').set('open');
+        }
+    });
 }
+
+function updateStoreUI(status) {
+    const closedOverlay = document.getElementById('storeClosedOverlay');
+    const toggle = document.getElementById('storeStatusToggle');
+    const label = document.getElementById('storeStatusLabel');
+
+    if (status === 'closed') {
+        if (closedOverlay) closedOverlay.classList.remove('hidden');
+        if (toggle) toggle.checked = false;
+        if (label) {
+            label.innerText = 'مغلق';
+            label.style.color = '#ef4444';
+        }
+    } else {
+        if (closedOverlay) closedOverlay.classList.add('hidden');
+        if (toggle) toggle.checked = true;
+        if (label) {
+            label.innerText = 'مفتوح';
+            label.style.color = '#059669';
+        }
+    }
+}
+
+function toggleStoreStatus() {
+    const toggle = document.getElementById('storeStatusToggle');
+    const newStatus = toggle.checked ? 'open' : 'closed';
+
+    if (!confirm(`هل أنت متأكد من تغيير حالة المتجر إلى [${newStatus === 'open' ? 'مفتوح' : 'مغلق'}]؟`)) {
+        toggle.checked = !toggle.checked;
+        return;
+    }
+
+    db.ref('storeStatus').set(newStatus);
+}
+window.toggleStoreStatus = toggleStoreStatus;
+
+function switchTab(tabId) {
+    // Hide all contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.color = '#64748b';
+        btn.style.borderBottom = 'none';
+    });
+
+    // Show selected
+    document.getElementById(tabId).style.display = 'block';
+
+    // Set active button style
+    const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.color = 'var(--primary)';
+        activeBtn.style.borderBottom = '3px solid var(--primary)';
+    }
+}
+window.switchTab = switchTab;
 
 const defaultReviews = [
     { id: 1, name: "أبو فهد", text: "ما شاء الله تبارك الله، اللحم طري وطعم بلدي حقيقي. التوصيل كان في الموعد والتغليف جداً نظيف.", stars: 5, tag: "عميل دائم" },
@@ -88,7 +157,9 @@ const defaultReviews = [
 
 let currentReviews = JSON.parse(localStorage.getItem('appReviews')) || defaultReviews;
 
-// DOM Elements
+// --- Map Picker Variables ---
+let map, marker;
+const RIYADH_COORDS = [24.7136, 46.6753];
 const productsGrid = document.getElementById('productsGrid');
 let pendingWhatsappUrl = ""; // لتخزين رابط الواتساب قبل التحويل
 const filterBtns = document.querySelectorAll('.filter-btn');
@@ -394,7 +465,80 @@ function openBooking(productId) {
     productNameInput.value = product.name;
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    // Initialize Map after modal is visible
+    setTimeout(() => initMapPicker(), 300);
 }
+
+function initMapPicker() {
+    const deliveryGroup = document.getElementById('locationGroup');
+    const isDelivery = document.getElementById('deliveryType').value === 'delivery';
+
+    if (deliveryGroup) deliveryGroup.style.display = isDelivery ? 'block' : 'none';
+    if (!isDelivery) return;
+
+    if (!map) {
+        map = L.map('mapPicker').setView(RIYADH_COORDS, 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        marker = L.marker(RIYADH_COORDS, { draggable: true }).addTo(map);
+
+        // Update hidden input on drag
+        marker.on('dragend', function (e) {
+            updateLocationValue(e.target.getLatLng());
+        });
+
+        // Update on map click
+        map.on('click', function (e) {
+            marker.setLatLng(e.latlng);
+            updateLocationValue(e.latlng);
+        });
+
+        // Initial value (silent)
+        updateLocationValue(marker.getLatLng(), true);
+    } else {
+        map.invalidateSize();
+    }
+}
+
+function updateLocationValue(latlng, silent = false) {
+    const link = `https://www.google.com/maps?q=${latlng.lat},${latlng.lng}`;
+    const linkInput = document.getElementById('locationLink');
+    const statusEl = document.getElementById('locationStatus');
+
+    if (linkInput) linkInput.value = link;
+
+    if (statusEl) {
+        if (silent) {
+            statusEl.innerHTML = `<span style="color: #64748b;">📍 يرجى تحريك العلامة لتحديد موقعك بدقة</span>`;
+        } else {
+            statusEl.innerHTML = `✅ تم تحديد الموقع بنجاح`;
+            statusEl.style.color = '#059669';
+        }
+    }
+}
+
+function getCurrentLocation() {
+    const status = document.getElementById('locationStatus');
+    status.innerHTML = "⏳ جاري تحديد موقعك...";
+
+    if (!navigator.geolocation) {
+        status.innerHTML = "❌ المتصفح لا يدعم تحديد الموقع";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition((position) => {
+        const coords = [position.coords.latitude, position.coords.longitude];
+        map.setView(coords, 16);
+        marker.setLatLng(coords);
+        updateLocationValue(marker.getLatLng());
+    }, () => {
+        status.innerHTML = "❌ فشل تحديد الموقع، يرجى تفعيل الـ GPS";
+    });
+}
+window.getCurrentLocation = getCurrentLocation;
 
 function applyCoupon() {
     const codeInput = document.getElementById('couponCode');
@@ -450,10 +594,26 @@ function updatePriceDisplay() {
 }
 
 document.addEventListener('change', (e) => {
-    if (e.target.id === 'deliveryType' || e.target.id === 'platesOption') {
+    if (e.target.id === 'deliveryType') {
+        updatePriceDisplay();
+        initMapPicker();
+    }
+    if (e.target.id === 'platesOption') {
         updatePriceDisplay();
     }
 });
+
+function toggleGiftFields() {
+    const isGift = document.getElementById('giftOption').checked;
+    const giftFields = document.getElementById('giftFields');
+    if (giftFields) {
+        giftFields.style.display = isGift ? 'block' : 'none';
+        if (isGift) {
+            giftFields.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+}
+window.toggleGiftFields = toggleGiftFields;
 
 async function handleFormSubmit(e) {
     e.preventDefault();
@@ -475,10 +635,8 @@ async function handleFormSubmit(e) {
     };
     const deliveryTimeText = deliveryTimeTypes[deliveryTimeVal] || 'لم يتم التحديد';
 
-    // موقع العميل وإيصال البنك
     const locationLink = document.getElementById('locationLink')?.value || '';
     const receiptFile = document.getElementById('receiptUpload')?.files[0];
-
     const notes = document.getElementById('notes').value;
     const product = productNameInput.value;
     const qty = document.getElementById('quantity').value;
@@ -492,7 +650,6 @@ async function handleFormSubmit(e) {
     const headTypes = { 'skinning': 'سلخ', 'noSkinning': 'بدون سلخ', 'meshlwat': 'مشلوطة (تشويط)' };
     const headText = headTypes[headVal];
 
-    // دالة مساعدة لتحويل الصورة إلى Base64
     const getBase64 = (file) => {
         return new Promise((resolve) => {
             if (!file) { resolve(null); return; }
@@ -505,14 +662,19 @@ async function handleFormSubmit(e) {
 
     const receiptData = await getBase64(receiptFile);
 
-    // حفظ الطلب محلياً
+    // Gifting Info
+    const isGift = document.getElementById('giftOption').checked;
+    const recipientName = document.getElementById('recipientName').value || '';
+    const recipientPhone = document.getElementById('recipientPhone').value || '';
+    const giftMessageText = document.getElementById('giftMessage').value || '';
+
     const orderData = {
         id: Math.floor(10000 + Math.random() * 90000),
         timestamp: new Date().toLocaleString('en-GB'),
         customer: name,
         phone: phone,
         product: product,
-        qty: qty,
+        qty: parseInt(qty),
         total: total,
         delivery: deliveryText,
         deliveryTime: deliveryTimeText,
@@ -523,41 +685,36 @@ async function handleFormSubmit(e) {
         head: headText,
         notes: notes,
         date: date,
-        status: 'pending'
+        status: 'pending',
+        isGift: isGift,
+        recipientName: recipientName,
+        recipientPhone: recipientPhone,
+        giftMessage: giftMessageText
     };
     saveOrderLocally(orderData);
 
-    // تغيير حالة الزر
     submitBtn.textContent = 'جاري توجيهك للواتساب...';
     submitBtn.disabled = true;
 
-    // --- إنشاء رابط الفاتورة الإلكترونية ---
-    const invoicePayload = {
-        id: orderData.id,
-        timestamp: orderData.timestamp,
-        customer: orderData.customer,
-        phone: orderData.phone,
-        product: orderData.product,
-        qty: orderData.qty,
-        total: orderData.total,
-        delivery: orderData.delivery,
-        deliveryTime: orderData.deliveryTime,
-        deliveryLocation: orderData.deliveryLocation,
-        cutting: orderData.cutting,
-        plates: orderData.plates,
-        head: orderData.head,
-        notes: orderData.notes,
-        date: orderData.date
-    };
+    // --- Invoice Creation ---
+    const invoicePayload = { ...orderData };
+    delete invoicePayload.bankReceipt; // Don't put heavy image in URL
 
     const jsonString = JSON.stringify(invoicePayload);
     const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
     const currentPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
     const invoiceUrl = `${window.location.protocol}//${window.location.host}${currentPath}/invoice.html?data=${encodeURIComponent(encodedData)}`;
 
-    // بناء الرسالة بشكل منسق جداً
-    let message = `*طلب حجز جديد 🐑*\n`;
+    // Build WhatsApp Message
+    let message = isGift ? `*🎁 طلب إهداء / صدقة جديد 🐑*\n` : `*طلب حجز جديد 🐑*\n`;
     message += `---------------------------\n`;
+    if (isGift) {
+        message += `*المرسل:* ${name}\n`;
+        message += `*المستلم:* ${recipientName}\n`;
+        message += `*جوال المستلم:* ${recipientPhone}\n`;
+        message += `*الرسالة:* ${giftMessageText}\n`;
+        message += `---------------------------\n`;
+    }
     message += `*رقم الفاتورة:* #${orderData.id}\n`;
     message += `*المنتج:* ${product}\n`;
     message += `*العدد:* ${qty}\n`;
@@ -566,7 +723,7 @@ async function handleFormSubmit(e) {
     message += `*توقيت التوصيل:* ${deliveryTimeText}\n`;
     message += `*التغليف:* ${platesText}\n`;
     message += `*الرأس والكراعين:* ${headText}\n`;
-    message += `*الإجمالي النهائي:* ${total}\n`;
+    if (!isGift) message += `*الإجمالي النهائي:* ${total}\n`;
     if (appliedCouponCode) message += `*كود الخصم:* ${appliedCouponCode} ✅\n`;
     message += `---------------------------\n`;
     message += `*اسم العميل:* ${name}\n`;
@@ -579,27 +736,22 @@ async function handleFormSubmit(e) {
     if (receiptData) message += `⚠️ *مرفق صورة إيصال التحويل بالنظام*\n`;
     message += `📄 *طباعة الفاتورة (PDF):*\n${invoiceUrl}`;
 
-    // رابط الواتساب المباشر
     pendingWhatsappUrl = `https://api.whatsapp.com/send?phone=${OWNER_PHONE}&text=${encodeURIComponent(message)}`;
 
-    // توجيه تلقائي للواتساب بعد تأخير بسيط لإعطاء تجربة أفضل
     setTimeout(() => {
         window.location.href = pendingWhatsappUrl;
     }, 1000);
 
-    // إظهار بطاقة النجاح (اختياري، يمكننا إبقاؤها كخلفية)
     closeModal();
-    if (successOverlay) {
-        successOverlay.classList.remove('hidden');
-    }
+    if (successOverlay) successOverlay.classList.remove('hidden');
 
-    // إعادة ضبط الزر والنموذج
     setTimeout(() => {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
         bookingForm.reset();
     }, 2000);
 }
+
 
 // Logic for Orders/Invoices
 function saveOrderLocally(order) {
@@ -866,7 +1018,7 @@ function openDashboardModal() {
 function updateDashboardStats(orders) {
     if (!orders) orders = [];
 
-    // Fix: Parse total as number properly
+    // Parse totals
     const totalSales = orders.reduce((sum, o) => {
         let price = 0;
         if (typeof o.total === 'string') {
@@ -878,11 +1030,18 @@ function updateDashboardStats(orders) {
     }, 0);
 
     const totalOrders = orders.length;
+    const completedOrders = orders.filter(o => o.status === 'completed').length;
 
-    // Determine Top Product
+    // Determine Top Product & Category Stats
     const productCounts = {};
+    const categoryCounts = {};
+
     orders.forEach(o => {
         productCounts[o.product] = (productCounts[o.product] || 0) + (o.qty || 1);
+        // Find category from currentProducts if possible, otherwise assume o.product is key
+        const prodData = currentProducts.find(p => p.name === o.product);
+        const cat = prodData ? prodData.category : 'other';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + (o.qty || 1);
     });
 
     let topProduct = "--";
@@ -894,11 +1053,61 @@ function updateDashboardStats(orders) {
         }
     }
 
-    // Inject into UI with formatting
+    // Update Main Stats
     document.getElementById('statTotalSales').innerHTML = `<span style="font-size: 1.4rem; font-weight: 800;">${totalSales.toLocaleString()}</span> <small>ر.س</small>`;
     document.getElementById('statTotalOrders').textContent = totalOrders;
     document.getElementById('statTopProduct').textContent = topProduct;
+
+    // Update Analytics Section
+    const completedSales = orders.filter(o => o.status === 'completed').reduce((sum, o) => {
+        let price = 0;
+        if (typeof o.total === 'string') {
+            price = parseFloat(o.total.replace(/[^\d.]/g, '')) || 0;
+        } else {
+            price = o.total || 0;
+        }
+        return sum + price;
+    }, 0);
+
+    if (document.getElementById('statCompletedOrders')) {
+        document.getElementById('statCompletedOrders').textContent = completedOrders;
+        document.getElementById('statEstProfit').textContent = (completedSales * 0.15).toLocaleString() + ' ر.س (تقديري)'; // Assume 15% profit margin
+    }
+
+    // Render Category Analytics (Progress Bars)
+    const analyticsList = document.getElementById('analyticsCategoryList');
+    if (analyticsList) {
+        const categories = { 'hari': 'حري', 'naimi': 'نعيمي', 'najdi': 'نجدي', 'tous': 'تيوس', 'other': 'أخرى' };
+        let html = '';
+        const totalItems = orders.reduce((sum, o) => sum + (o.qty || 1), 0) || 1;
+
+        for (const [key, label] of Object.entries(categories)) {
+            const count = categoryCounts[key] || 0;
+            const percent = (count / totalItems) * 100;
+            html += `
+                <div style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 4px;">
+                        <span>${label}</span>
+                        <span>${count} ذبيحة (${percent.toFixed(0)}%)</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden;">
+                        <div style="width: ${percent}%; height: 100%; background: var(--primary);"></div>
+                    </div>
+                </div>
+            `;
+        }
+        analyticsList.innerHTML = html;
+    }
 }
+
+function toggleDashboardAnalytics() {
+    const el = document.getElementById('analyticsSection');
+    if (el) {
+        el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        if (el.style.display === 'block') el.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+window.toggleDashboardAnalytics = toggleDashboardAnalytics;
 
 function closeDashboardModal() {
     document.getElementById('dashboardModal').classList.remove('active');
@@ -960,10 +1169,40 @@ function renderDashboardOrders(filteredOrders) {
         // Sort orders by ID descending (newest first)
         orders.sort((a, b) => b.id - a.id);
 
-        tbody.innerHTML = orders.map(order => `
-            <tr>
-                <td style="padding:10px; border:1px solid #ddd;">#${order.id}</td>
-                <td style="padding:10px; border:1px solid #ddd;">${order.customer}<br><small>${order.phone}</small></td>
+        // Loyalty Logic: Count orders per phone
+        const ordersByPhone = {};
+        orders.forEach(o => {
+            ordersByPhone[o.phone] = (ordersByPhone[o.phone] || 0) + 1;
+        });
+
+        tbody.innerHTML = orders.map(order => {
+            const isLoyal = ordersByPhone[order.phone] >= 3;
+            const giftLabel = order.isGift ? `<br><span style="color:#dc2626; font-size:0.7rem; font-weight:700;">🎁 إهداء لـ: ${order.recipientName}<br>📱: ${order.recipientPhone}</span>` : '';
+
+            // Suggestion 3: Row coloring and New badge
+            const orderTime = new Date(order.timestamp || order.date);
+            const now = new Date();
+            const diffMin = (now - orderTime) / (1000 * 60);
+            const isVeryNew = diffMin < 60; // New in the last hour
+
+            let rowBg = '';
+            let statusBadgeColor = '#94a3b8';
+            if (order.status === 'pending') { rowBg = '#fff8e1'; statusBadgeColor = '#f59e0b'; }
+            if (order.status === 'preparing') { rowBg = '#e3f2fd'; statusBadgeColor = '#2563eb'; }
+            if (order.status === 'delivering') { rowBg = '#f0fdf4'; statusBadgeColor = '#059669'; }
+            if (order.status === 'completed') { rowBg = '#f9fafb'; statusBadgeColor = '#64748b'; }
+
+            return `
+            <tr style="background: ${rowBg}; border-bottom: 2px solid #fff;">
+                <td style="padding:10px; border:1px solid #ddd; font-weight:700;">
+                    ${isVeryNew ? '<span style="background:#ef4444; color:white; font-size:0.6rem; padding:2px 4px; border-radius:4px; margin-left:5px; vertical-align:middle;">جديد</span>' : ''}
+                    #${order.id}
+                </td>
+                <td style="padding:10px; border:1px solid #ddd;">
+                    ${isLoyal ? '<span title="عميل مميز (3+ طلبات)" style="color:#d97706;">⭐</span>' : ''}
+                    ${order.customer}<br><small>${order.phone}</small>
+                    ${giftLabel}
+                </td>
                 <td style="padding:10px; border:1px solid #ddd;">${order.product}</td>
                 <td style="padding:10px; border:1px solid #ddd;">${order.qty}</td>
                 <td style="padding:10px; border:1px solid #ddd;">${order.date || '---'}<br>${order.deliveryTime || ''}</td>
@@ -982,15 +1221,34 @@ function renderDashboardOrders(filteredOrders) {
                         `).join('')}
                     </select>
                 </td>
-                <td style="padding:10px; border:1px solid #ddd;">
-                    <button onclick="printOrderLabel('${order.dbId}')" style="background:#b45309; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">
+                <td style="padding:10px; border:1px solid #ddd; white-space: nowrap;">
+                    <button onclick="printOrderLabel('${order.dbId}')" style="background:#b45309; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer; margin-left: 5px;">
                         <i class="fa-solid fa-print"></i> ملصق
+                    </button>
+                    <button onclick="deleteOrderFromAdmin('${order.dbId}')" style="background:#dc2626; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">
+                        <i class="fa-solid fa-trash"></i> حذف
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     }
 }
+
+function deleteOrderFromAdmin(dbId) {
+    if (!dbId) return;
+    if (!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً من قاعدة البيانات؟ ⚠️')) return;
+
+    db.ref('orders/' + dbId).remove()
+        .then(() => {
+            alert("تم حذف الطلب بنجاح! 🗑️");
+        })
+        .catch((error) => {
+            console.error("Delete Error:", error);
+            alert("خطأ في حذف الطلب: " + error.message);
+        });
+}
+window.deleteOrderFromAdmin = deleteOrderFromAdmin;
 
 function resetDashboardFilters() {
     if (document.getElementById('dbSearch')) document.getElementById('dbSearch').value = '';
@@ -1142,9 +1400,17 @@ function exportOrdersToCSV() {
 function openReviewModal() {
     const rModal = document.getElementById('reviewModal');
     if (rModal) {
-        rModal.style.display = 'flex';
+        rModal.classList.add('active');
         document.body.style.overflow = 'hidden';
         setRating(5); // Default rating
+    }
+}
+
+function closeReviewModal() {
+    const rModal = document.getElementById('reviewModal');
+    if (rModal) {
+        rModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
     }
 }
 
@@ -1218,13 +1484,6 @@ function deleteReview(reviewId) {
     }
 }
 
-function closeReviewModal() {
-    const rModal = document.getElementById('reviewModal');
-    if (rModal) {
-        rModal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
-}
 
 function setRating(val) {
     document.getElementById('reviewRating').value = val;
@@ -1261,7 +1520,7 @@ function submitReview(event) {
 function openTrackingModal() {
     const tModal = document.getElementById('trackingModal');
     if (tModal) {
-        tModal.style.display = 'flex';
+        tModal.classList.add('active');
         document.body.style.overflow = 'hidden';
         document.getElementById('trackResult').style.display = 'none';
         document.getElementById('trackInput').value = '';
@@ -1271,7 +1530,7 @@ function openTrackingModal() {
 function closeTrackingModal() {
     const tModal = document.getElementById('trackingModal');
     if (tModal) {
-        tModal.style.display = 'none';
+        tModal.classList.remove('active');
         document.body.style.overflow = 'auto';
     }
 }
@@ -1426,3 +1685,201 @@ function filterProducts(category) {
 }
 window.filterProducts = filterProducts;
 window.resetDashboardFilters = resetDashboardFilters;
+
+// Update Mobile Bottom Nav Active State
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        item.addEventListener('click', function () {
+            document.querySelectorAll('.mobile-nav-item').forEach(nav => nav.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Initialize seasonal content automatically
+    initSeasonalPromo();
+});
+
+function initSeasonalPromo() {
+    const now = new Date();
+    const gMonth = now.getMonth(); // 0-11
+    const gDate = now.getDate();
+    const gYear = now.getFullYear();
+
+    let season = 'general';
+    let hijriSuccess = false;
+
+    // 1. Try Hijri Detection (Umm al-Qura) with forced Western digits for parsing
+    try {
+        const hijriFormatter = new Intl.DateTimeFormat('en-u-ca-islamic-uma-nu-latn', {
+            day: 'numeric', month: 'numeric', year: 'numeric'
+        });
+        const parts = hijriFormatter.formatToParts(now);
+        const hDay = parseInt(parts.find(p => p.type === 'day').value);
+        const hMonth = parseInt(parts.find(p => p.type === 'month').value);
+
+        if (hMonth === 9) {
+            season = (hDay >= 25) ? 'eid-fitr' : 'ramadan';
+            hijriSuccess = true;
+        } else if (hMonth === 10 && hDay <= 4) {
+            season = 'eid-fitr';
+            hijriSuccess = true;
+        } else if (hMonth === 8 && hDay >= 20) {
+            season = 'ramadan';
+            hijriSuccess = true;
+        } else if (hMonth === 12 && hDay <= 13) {
+            season = 'eid-adha';
+            hijriSuccess = true;
+        }
+    } catch (e) { console.log("Hijri Detection Failed, using Gregorian Fallback"); }
+
+    // 2. Gregorian Fallback for 2026 (Safety Net)
+    if (!hijriSuccess && gYear === 2026) {
+        // Feb 18 - Mar 15: Ramadan
+        if ((gMonth === 1 && gDate >= 18) || (gMonth === 2 && gDate <= 15)) season = 'ramadan';
+        // Mar 16 - Mar 25: Eid al-Fitr Prep & Days
+        else if (gMonth === 2 && (gDate >= 16 && gDate <= 25)) season = 'eid-fitr';
+        // June 2026: Eid al-Adha
+        else if (gMonth === 5 && (gDate >= 1 && gDate <= 10)) season = 'eid-adha';
+    }
+
+    const tickerItems = {
+        'ramadan': [
+            { text: '🌙 مبارك عليكم شهر رمضان المبارك .. عروض خاصة على جميع الذبائح 🌙', color: '#FFC857' },
+            { text: '✨ خصم خاص عند طلب ذبيحتين فأكثر .. جودة بلدية 100% ✨', color: '#fff' },
+            { text: '🚚 خدمة المذبح والتوصيل المبرد متاحة طوال الشهر الفضيل 🚚', color: '#FFC857' }
+        ],
+        'eid-fitr': [
+            { text: '🎉 عيدكم مبارك وكل عام وأنتم بخير .. تقبل الله منا ومنكم 🎉', color: '#FFC857' },
+            { text: '🐏 عيدنا غير مع ذبائح "ابو محمد" - جودة تبيض الوجه 🐏', color: '#fff' },
+            { text: '🚚 خدمة التوصيل مستمرة طوال أيام العيد السعيد 🚚', color: '#FFC857' }
+        ],
+        'eid-adha': [
+            { text: '🐑 بدأ الحجز لأضاحي العيد .. حري ونعيمي ونجدي فاخر 🐑', color: '#FFC857' },
+            { text: '✨ أضاحي مختارة بعناية ومطابقة للشروط الشرعية ✨', color: '#fff' },
+            { text: '🚚 حجزك المبكر يضمن لك أفضل اختيار وأسرع توصيل 🚚', color: '#FFC857' }
+        ],
+        'general': [
+            { text: '🐏 ذبائح بلدية طازجة (حري - نعيمي) من المراح لبيتك مباشرة 🐏', color: '#FFC857' },
+            { text: '🚚 خدمة الذبح والتوصيل المبرد في الرياض طوال الأسبوع 🚚', color: '#fff' },
+            { text: '✨ جودة وطعم يعيد لك ذكريات الماضي - جودة أبو محمد ✨', color: '#FFC857' }
+        ]
+    };
+
+    const modalContent = {
+        'ramadan': `
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.2; font-size:5rem;">🌙</div>
+            <span class="close-modal" onclick="closePromoModal()">&times;</span>
+            <div style="margin-top:20px; margin-bottom:25px;">
+                <i class="fa-solid fa-moon-stars" style="font-size:3rem; color:#D4AF37;"></i>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">رمضان كريم مبارك 🌙</h2>
+            </div>
+            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
+                <p>عروض خاصة بمناسبة شهر رمضان المبارك على جميع الذبائح 🐏</p>
+                <div style="background:rgba(212,175,55,0.15); padding:10px; border-radius:12px; margin-top:15px;">
+                    <p style="margin:0;">🎁 خصم خاص عند طلب ذبيحتين فأكثر</p>
+                </div>
+            </div>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#D4AF37; color:#1b4d21; font-weight:900;">تصفح العروض الآن ✨</button>
+        `,
+        'eid-fitr': `
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.15; font-size:5rem;">✨</div>
+            <span class="close-modal" onclick="closePromoModal()">&times;</span>
+            <div style="margin-top:20px; margin-bottom:25px;">
+                <i class="fa-solid fa-gift" style="font-size:3rem; color:#D4AF37;"></i>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">عيدكم مبارك 🎉</h2>
+                <h3 style="font-size:1.1rem; opacity:0.9;">وكل عام وأنتم بخير</h3>
+            </div>
+            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
+                <p>بمناسبة عيد الفطر السعيد .. ذبائحنا جاهزة لضيوفكم 🐑</p>
+                <div style="background:rgba(212,175,55,0.15); padding:10px; border-radius:12px; margin-top:15px;">
+                    <p style="margin:0; font-weight:800;">🎁 عروض خاصة لولائم العيد</p>
+                </div>
+            </div>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#D4AF37; color:#1b4d21; font-weight:900;">اطلب ذبيحة العيد الآن 🐏</button>
+        `,
+        'eid-adha': `
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.15; font-size:5rem;">🐑</div>
+            <span class="close-modal" onclick="closePromoModal()">&times;</span>
+            <div style="margin-top:20px; margin-bottom:25px;">
+                <i class="fa-solid fa-kaaba" style="font-size:3rem; color:#D4AF37;"></i>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">أضاحي العيد 🐑</h2>
+            </div>
+            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
+                <p>افضل الخيارات للأضاحي البلدية (حري ونعيمي) 🐏</p>
+                <div style="background:rgba(212,175,55,0.15); padding:10px; border-radius:12px; margin-top:15px;">
+                    <p style="margin:0; font-weight:800;">📦 متاح الحجز المبكر والذبح والتوصيل</p>
+                </div>
+            </div>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#2C5F2D; color:#fff; font-weight:900;">احجز أضحيتك الآن ✨</button>
+        `,
+        'general': `
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.1; font-size:5rem;">🐏</div>
+            <span class="close-modal" onclick="closePromoModal()">&times;</span>
+            <div style="margin-top:20px; margin-bottom:25px;">
+                <i class="fa-solid fa-star" style="font-size:3rem; color:#D4AF37;"></i>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">نؤمن بيوتكم بأجود الذبائح 🐏</h2>
+            </div>
+            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
+                <p>كل أسبوع عروض جديدة على الحري والنعيمي والنجدي ✨</p>
+                <p>ذبح يومي وتوصيل مبرد سريع لجميع أحياء الرياض 🚚</p>
+            </div>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#D4AF37; color:#1b4d21; font-weight:900;">ابدأ اختيار ذبيحتك 🚀</button>
+        `
+    };
+
+    // Update Ticker
+    const tickerContainer = document.getElementById('dynamicTicker');
+    if (tickerContainer) {
+        const items = tickerItems[season] || tickerItems['general'];
+        tickerContainer.innerHTML = items.map(item => `
+            <div class="ticker__item" style="color: ${item.color}; font-weight: 800;">${item.text}</div>
+        `).join('') + items.map(item => `
+            <div class="ticker__item" style="color: ${item.color}; font-weight: 800;">${item.text}</div>
+        `).join(''); // Double it for loop
+    }
+
+    // Update Modal
+    const modalContainer = document.getElementById('dynamicPromoModalContent');
+    if (modalContainer) {
+        modalContainer.innerHTML = modalContent[season] || modalContent['general'];
+    }
+
+    // Show on load logic (refined per season)
+    const sessionKey = `promoShown_${season}_${hYear}`;
+    if (!sessionStorage.getItem(sessionKey)) {
+        setTimeout(() => {
+            const pModal = document.getElementById('promoModal');
+            if (pModal) {
+                pModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }, 1500);
+    }
+}
+
+function closePromoModal() {
+    const pModal = document.getElementById('promoModal');
+    if (pModal) {
+        pModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+
+        // Find which Hijri season we are in
+        const hijriFormatter = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-uma-nu-latn', {
+            day: 'numeric',
+            month: 'numeric',
+            year: 'numeric'
+        });
+        const parts = hijriFormatter.formatToParts(new Date());
+        const hDay = parseInt(parts.find(p => p.type === 'day').value);
+        const hMonth = parseInt(parts.find(p => p.type === 'month').value);
+        const hYear = parts.find(p => p.type === 'year').value;
+
+        let season = 'general';
+        if ((hMonth === 8 && hDay >= 20) || (hMonth === 9 && hDay <= 24)) season = 'ramadan';
+        else if ((hMonth === 9 && hDay >= 25) || (hMonth === 10 && hDay <= 4)) season = 'eid-fitr';
+        else if (hMonth === 12 && (hDay >= 1 && hDay <= 13)) season = 'eid-adha';
+
+        sessionStorage.setItem(`promoShown_${season}_${hYear}`, 'true');
+    }
+}
+window.closePromoModal = closePromoModal;

@@ -19,20 +19,17 @@
     <!-- Google AdSense Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2461384535125374"
         crossorigin="anonymous"></script>
+    <!-- Leaflet.js for Interactive Map Picker -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 
 <body>
 
-    <!-- Top Scrolling Ticker (Ramadan Edition) -->
+    <!-- Top Scrolling Ticker (Eid Edition) -->
     <div class="ticker-wrap"
         style="background: linear-gradient(90deg, #1B4D21 0%, #2C5F2D 100%); border-bottom: 1px solid #FFC857;">
-        <div class="ticker">
-            <div class="ticker__item" style="color: #FFC857; font-weight: 800;">🌙 مبارك عليكم شهر رمضان المبارك .. عروض
-                خاصة على جميع الذبائح 🌙</div>
-            <div class="ticker__item" style="color: #fff;">✨ خصم خاص عند طلب ذبيحتين فأكثر .. جودة بلدية 100% ✨</div>
-            <div class="ticker__item" style="color: #FFC857; font-weight: 800;">🚚 خدمة المذبح والتوصيل المبرد متاحة
-                طوال شهر رمضان المبارك 🚚</div>
-            <div class="ticker__item" style="color: #fff;">🎁 اجعل مائدتك مميزة مع ذبائح "ابو محمد" - اطلب الآن 🎁</div>
+        <div class="ticker" id="dynamicTicker">
+            <!-- سيتم توليد المحتوى هنا برمجياً -->
         </div>
     </div>
 
@@ -422,8 +419,22 @@
                 </div>
 
                 <div id="locationGroup" class="form-group">
-                    <label for="locationLink">موقع التوصيل (رابط جوجل ماب)</label>
-                    <input type="url" id="locationLink" placeholder="أدخل رابط الموقع من خرائط جوجل">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>حدد موقع التوصيل على الخريطة 📍</span>
+                        <button type="button" onclick="getCurrentLocation()"
+                            style="background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; font-weight: 700;">
+                            <i class="fa-solid fa-location-crosshairs"></i> موقعي الحالي
+                        </button>
+                    </label>
+
+                    <div id="mapPicker"
+                        style="height: 250px; width: 100%; border-radius: 12px; border: 2px solid #e2e8f0; margin: 10px 0; z-index: 1;">
+                    </div>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">حرك الخريطة وضع العلامة الحمراء
+                        على موقعك بالضبط.</p>
+
+                    <input type="hidden" id="locationLink">
+                    <div id="locationStatus" style="font-size: 0.8rem; color: #059669; font-weight: 700;"></div>
                 </div>
 
                 <div class="form-group">
@@ -461,17 +472,48 @@
                 </div>
 
                 <!-- Extra Options -->
-                <div class="form-group"
-                    style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 20px;">
-                    <label
-                        style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #1e293b; font-weight: 700;">
-                        <input type="checkbox" id="platesOption" style="width: 18px; height: 18px;">
-                        <div style="display: flex; flex-direction: column;">
-                            <span>🍽️ طلب تغليف في أطباق</span>
-                            <span style="font-size: 0.75rem; color: #059669; font-weight: 500;">(إضافة +30 ر.س
-                                )</span>
-                        </div>
-                    </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div class="form-group"
+                        style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 0;">
+                        <label
+                            style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #1e293b; font-weight: 700;">
+                            <input type="checkbox" id="platesOption" style="width: 18px; height: 18px;">
+                            <div style="display: flex; flex-direction: column;">
+                                <span>🍽️ تغليف في أطباق</span>
+                                <span style="font-size: 0.75rem; color: #059669; font-weight: 500;">(+30 ر.س)</span>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-group"
+                        style="background: #fef2f2; padding: 10px; border-radius: 8px; border: 1px dashed #fecaca; margin-bottom: 0;">
+                        <label
+                            style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #991b1b; font-weight: 700;">
+                            <input type="checkbox" id="giftOption" style="width: 18px; height: 18px;"
+                                onchange="toggleGiftFields()">
+                            <div style="display: flex; flex-direction: column;">
+                                <span>🎁 إهداء / صدقة</span>
+                                <span style="font-size: 0.75rem; color: #dc2626; font-weight: 500;">(إخفاء السعر عن
+                                    المستلم)</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Gift Info (Hidden by default) -->
+                <div id="giftFields"
+                    style="display: none; background: #fff1f2; padding: 15px; border-radius: 12px; border: 1px solid #fda4af; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>اسم المستلم / الجهة الخيرية</label>
+                        <input type="text" id="recipientName" placeholder="مثال: صالح المحمد / جمعية البر">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم جوال المستلم (للتوصيل)</label>
+                        <input type="tel" id="recipientPhone" placeholder="05xxxxxxxx">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>رسالة الإهداء (تظهر في الفاتورة)</label>
+                        <input type="text" id="giftMessage" placeholder="مثال: بالصحة والعافية، صدقة عن فلان...">
+                    </div>
                 </div>
 
                 <!-- Quantity & Price Section -->
@@ -625,6 +667,21 @@
         </div>
     </div>
 
+    <!-- Store Closed Overlay -->
+    <div id="storeClosedOverlay" class="overlay hidden"
+        style="z-index: 10000; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;">
+        <div class="success-card" style="text-align: center; border-top: 5px solid #ef4444;">
+            <!-- Hidden Admin Access: Click the icon 3 times -->
+            <div onclick="adminBypassClick()"
+                style="font-size: 4rem; margin-bottom: 10px; cursor: default; user-select: none;">🛑</div>
+            <h3 style="color: #ef4444;">المتجر مغلق حالياً</h3>
+            <p id="storeClosedMessage">نعتذر منكم، المتجر متوقف عن استقبال الطلبات حالياً. نرجو المحاولة في وقت لاحق.
+            </p>
+            <div style="margin-top: 20px; font-weight: bold; color: var(--primary);">أبو محمد للمواشي - نتشرف بزيارتكم
+                دائماً</div>
+        </div>
+    </div>
+
     <!-- Success Message Overlay -->
     <div id="successOverlay" class="overlay hidden">
         <div class="success-card">
@@ -646,151 +703,206 @@
 
     <!-- Owner Dashboard Modal -->
     <div id="dashboardModal" class="modal">
-        <div class="modal-content dashboard-modal-content" style="max-width: 95%; width: 95%;">
+        <div class="modal-content dashboard-modal-content"
+            style="max-width: 95%; width: 95%; max-height: 90vh; overflow-y: auto;">
             <span class="close-modal" onclick="closeDashboardModal()">&times;</span>
-            <div class="modal-header">
-                <h3>لوحة تحكم الطلبات</h3>
-                <p>ملخص طلبات اليوم وجدول التجهيز</p>
-            </div>
-
-            <!-- Suggestion 1: Dashboard Analytics -->
-            <div class="dashboard-stats"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 20px;">
-                <div class="stat-card"
-                    style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 12px; text-align: center;">
-                    <span style="display: block; font-size: 0.85rem; color: #166534; font-weight: 700;">مجموع
-                        المبيعات</span>
-                    <strong id="statTotalSales" style="font-size: 1.4rem; color: var(--primary);">0 ر.س</strong>
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h3 style="margin: 0;">لوحة التحكم الشاملة 🚀</h3>
+                    <p style="margin: 5px 0 0;">إدارة الطلبات، المنتجات، والتقارير في مكان واحد</p>
                 </div>
-                <div class="stat-card"
-                    style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 12px; text-align: center;">
-                    <span style="display: block; font-size: 0.85rem; color: #1e40af; font-weight: 700;">عدد
-                        الطلبات</span>
-                    <strong id="statTotalOrders" style="font-size: 1.4rem; color: #1d4ed8;">0</strong>
-                </div>
-                <div class="stat-card"
-                    style="background: #fefce8; border: 1px solid #fef08a; padding: 15px; border-radius: 12px; text-align: center;">
-                    <span style="display: block; font-size: 0.85rem; color: #854d0e; font-weight: 700;">الأكثر
-                        طلباً</span>
-                    <strong id="statTopProduct" style="font-size: 1.1rem; color: #a16207;">--</strong>
-                </div>
-            </div>
-
-            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn-primary" onclick="window.print()" style="padding: 5px 15px; font-size: 0.9rem;">طباعة
-                    الجدول</button>
-                <button class="btn-secondary" onclick="exportOrdersToCSV()"
-                    style="padding: 5px 15px; font-size: 0.9rem;">تصدير CSV</button>
-            </div>
-
-            <!-- Dashboard Filters -->
-            <div class="dashboard-filters"
-                style="margin-top: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">بحث باسم
-                        العميل أو المنتج</label>
-                    <input type="text" id="dbSearch" oninput="renderDashboardOrders()" placeholder="مثال: محمد، حري..."
-                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
-                </div>
-                <div style="width: 150px;">
+                <!-- Suggestion 2: Store Status Toggle -->
+                <div
+                    style="background: #f8fafc; padding: 10px 15px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; min-width: 150px;">
                     <label
-                        style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">الحالة</label>
-                    <select id="dbStatus" onchange="renderDashboardOrders()"
-                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
-                        <option value="all">الكل</option>
-                        <option value="pending">⏳ جاري المعالجة</option>
-                        <option value="preparing">🔪 جاري التجهيز</option>
-                        <option value="delivering">🚚 خرج للتوصيل</option>
-                        <option value="completed">✅ تم التوصيل</option>
-                    </select>
+                        style="display: block; font-size: 0.75rem; font-weight: 800; margin-bottom: 5px; color: #64748b;">حالة
+                        المتجر</label>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <span id="storeStatusLabel"
+                            style="font-size: 0.85rem; font-weight: 700; color: #059669;">مفتوح</span>
+                        <label class="switch"
+                            style="position: relative; display: inline-block; width: 44px; height: 22px;">
+                            <input type="checkbox" id="storeStatusToggle" checked onchange="toggleStoreStatus()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                 </div>
-                <div style="width: 150px;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">تاريخ
-                        الطلب</label>
-                    <input type="date" id="dbDate" onchange="renderDashboardOrders()"
-                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
-                </div>
-                <button class="btn-secondary" onclick="resetDashboardFilters()"
-                    style="padding: 8px 15px; font-size: 0.85rem; border: 1px solid #cbd5e1;">إعادة ضبط</button>
-            </div>
-            <div class="dashboard-table-wrapper"
-                style="overflow-x: auto; overflow-y: auto; max-height: 400px; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <table class="dashboard-table"
-                    style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.9rem;">
-                    <thead style="position: sticky; top: 0; z-index: 10;">
-                        <tr style="background: #2C5F2D; color: white;">
-                            <th style="padding: 10px; border: 1px solid #ddd;">رقم الطلب</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">العميل</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">العدد</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">التوقيت</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">التقطيع</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">التغليف</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">اللوكيشن</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">الإيصال</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">الحالة</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">الملصق</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dashboardTableBody">
-                        <!-- Orders will be injected here -->
-                    </tbody>
-                </table>
             </div>
 
-            <!-- Product Management Section (Prices & Stock) -->
-            <div class="inventory-section" style="margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 20px;">
-                <div class="modal-header">
-                    <h3>إدارة المنتجات (الأسعار والمخزون)</h3>
-                    <p>عدل الأسعار أو عطل المنتجات التي نفذت كميتها</p>
+            <!-- Suggestion 1: Dashboard Tabs Navigation -->
+            <div class="dashboard-tabs-nav"
+                style="display: flex; gap: 5px; margin-top: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 1px; overflow-x: auto;">
+                <button class="tab-btn active" onclick="switchTab('tabOrders')" id="btnTabOrders">📦 الطلبات</button>
+                <button class="tab-btn" onclick="switchTab('tabStore')" id="btnTabStore">🐑 المتجر والأسعار</button>
+                <button class="tab-btn" onclick="switchTab('tabReports')" id="btnTabReports">📊 التقارير</button>
+                <button class="tab-btn" onclick="switchTab('tabReviews')" id="btnTabReviews">⭐ الآراء</button>
+            </div>
+
+            <!-- TAB: ORDERS -->
+            <div id="tabOrders" class="tab-content" style="padding-top: 20px;">
+                <div class="dashboard-filters"
+                    style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">بحث
+                            باسم العميل أو المنتج</label>
+                        <input type="text" id="dbSearch" oninput="renderDashboardOrders()"
+                            placeholder="مثال: محمد، حري..."
+                            style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+                    </div>
+                    <div style="width: 150px;">
+                        <label
+                            style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">الحالة</label>
+                        <select id="dbStatus" onchange="renderDashboardOrders()"
+                            style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+                            <option value="all">الكل</option>
+                            <option value="pending">⏳ جاري المعالجة</option>
+                            <option value="preparing">🔪 جاري التجهيز</option>
+                            <option value="delivering">🚚 خرج للتوصيل</option>
+                            <option value="completed">✅ تم التوصيل</option>
+                        </select>
+                    </div>
+                    <div style="width: 150px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px;">تاريخ
+                            الطلب</label>
+                        <input type="date" id="dbDate" onchange="renderDashboardOrders()"
+                            style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;">
+                    </div>
+                    <button class="btn-secondary" onclick="resetDashboardFilters()"
+                        style="padding: 8px 15px; font-size: 0.85rem; border: 1px solid #cbd5e1;">إعادة ضبط</button>
                 </div>
-                <div class="dashboard-table-wrapper" style="overflow-x: auto; margin-top: 15px;">
+
+                <div class="dashboard-table-wrapper"
+                    style="overflow-x: auto; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <table class="dashboard-table"
                         style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.9rem;">
-                        <thead>
-                            <tr style="background: #b45309; color: white;">
+                        <thead style="position: sticky; top: 0; z-index: 10;">
+                            <tr style="background: #2C5F2D; color: white;">
+                                <th style="padding: 10px; border: 1px solid #ddd;">رقم الطلب</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">العميل</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">السعر (ر.س)</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">الوزن والعمر</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">العدد</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">التوقيت</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">التقطيع</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">التغليف</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">اللوكيشن</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">الإيصال</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">الحالة</th>
                                 <th style="padding: 10px; border: 1px solid #ddd;">الإجراء</th>
                             </tr>
                         </thead>
-                        <tbody id="productManagementBody">
-                            <!-- Products will be injected here -->
-                        </tbody>
+                        <tbody id="dashboardTableBody"></tbody>
                     </table>
                 </div>
-                <!-- Review Management Section (DASHBOARD) -->
-                <div class="inventory-section"
-                    style="margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 20px;">
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="window.print()"
+                        style="font-size: 0.8rem; padding: 5px 12px;"><i class="fa-solid fa-print"></i> طباعة
+                        الجدول</button>
+                    <button class="btn btn-secondary" onclick="exportOrdersToCSV()"
+                        style="font-size: 0.8rem; padding: 5px 12px;"><i class="fa-solid fa-file-csv"></i> تصدير
+                        CSV</button>
+                </div>
+            </div>
+
+            <!-- TAB: STORE -->
+            <div id="tabStore" class="tab-content" style="display: none; padding-top: 20px;">
+                <div class="inventory-section">
+                    <div class="modal-header">
+                        <h3>إدارة المنتجات (الأسعار والمخزون)</h3>
+                        <p>عدل الأسعار أو عطل المنتجات التي نفذت كميتها</p>
+                    </div>
+                    <div class="dashboard-table-wrapper" style="overflow-x: auto; margin-top: 15px;">
+                        <table class="dashboard-table"
+                            style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #b45309; color: white;">
+                                    <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">السعر (ر.س)</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">الوزن والعمر</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">الحالة</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productManagementBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: REPORTS -->
+            <div id="tabReports" class="tab-content" style="display: none; padding-top: 20px;">
+                <div id="analyticsContent" style="background: #fff; border-radius: 12px; padding: 20px;">
+                    <div class="dashboard-stats"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                        <div class="stat-card"
+                            style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 12px; text-align: center;">
+                            <span style="display: block; font-size: 0.85rem; color: #166534; font-weight: 700;">مجموع
+                                المبيعات</span>
+                            <strong id="statTotalSales" style="font-size: 1.4rem; color: var(--primary);">0 ر.س</strong>
+                        </div>
+                        <div class="stat-card"
+                            style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 12px; text-align: center;">
+                            <span style="display: block; font-size: 0.85rem; color: #1e40af; font-weight: 700;">عدد
+                                الطلبات</span>
+                            <strong id="statTotalOrders" style="font-size: 1.4rem; color: #1d4ed8;">0</strong>
+                        </div>
+                        <div class="stat-card"
+                            style="background: #fefce8; border: 1px solid #fef08a; padding: 15px; border-radius: 12px; text-align: center;">
+                            <span style="display: block; font-size: 0.85rem; color: #854d0e; font-weight: 700;">الأكثر
+                                طلباً</span>
+                            <strong id="statTopProduct" style="font-size: 1.1rem; color: #a16207;">--</strong>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                        <div
+                            style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <h5 style="margin: 0 0 15px; font-size: 0.95rem;">📊 المبيعات حسب الفئة</h5>
+                            <div id="analyticsCategoryList"></div>
+                        </div>
+                        <div
+                            style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <h5 style="margin: 0 0 15px; font-size: 0.95rem;">📈 ملخص الأداء</h5>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span>طلبات تم توصيلها</span>
+                                    <strong id="statCompletedOrders" style="color: #059669;">0</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span>أرباح تقديرية (15%)</span>
+                                    <strong id="statEstProfit" style="color: var(--primary);">0 ر.س</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: REVIEWS -->
+            <div id="tabReviews" class="tab-content" style="display: none; padding-top: 20px;">
+                <div class="inventory-section">
                     <div class="modal-header">
                         <h3>إدارة وآراء العملاء ⭐</h3>
-                        <p>أضف تقييمات العملاء اللي تجيك في الواتساب لتظهر في الموقع</p>
                     </div>
-
-                    <!-- Add New Review Form (In Dashboard) -->
                     <div
-                        style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                             <input type="text" id="adminReviewName" placeholder="اسم العميل"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                style="padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                             <select id="adminReviewStars"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                style="padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                                 <option value="5">⭐⭐⭐⭐⭐ (5)</option>
                                 <option value="4">⭐⭐⭐⭐ (4)</option>
                                 <option value="3">⭐⭐⭐ (3)</option>
                             </select>
                         </div>
                         <textarea id="adminReviewText" placeholder="نص التقييم..."
-                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; height: 60px; margin-bottom: 10px;"></textarea>
-                        <button onclick="addNewReviewFromAdmin()" class="btn btn-primary"
-                            style="width: 100%; padding: 10px;">إضافة التقييم للموقع</button>
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; height: 80px; margin-bottom: 15px;"></textarea>
+                        <button onclick="addNewReviewFromAdmin()" class="btn btn-primary full-width">إضافة التقييم
+                            للموقع</button>
                     </div>
-
                     <div class="dashboard-table-wrapper" style="overflow-x: auto;">
                         <table class="dashboard-table"
-                            style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.85rem;">
+                            style="width: 100%; border-collapse: collapse; text-align: right; background: white; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background: #1B4D21; color: white;">
                                     <th style="padding: 10px; border: 1px solid #ddd;">العميل</th>
@@ -799,15 +911,12 @@
                                     <th style="padding: 10px; border: 1px solid #ddd;">حذف</th>
                                 </tr>
                             </thead>
-                            <tbody id="adminReviewsTableBody">
-                                <!-- Reviews will be injected here -->
-                            </tbody>
+                            <tbody id="adminReviewsTableBody"></tbody>
                         </table>
                     </div>
                 </div>
-
-
             </div>
+
         </div>
     </div>
     </div>
@@ -837,15 +946,11 @@
         </div>
     </div>
 
-    <!-- Ramadan Promo Bar -->
-    <div class="promo-bar">
-        <div class="promo-track">
-            <span>🌙 مبارك عليكم الشهر .. عروض خاصة بمناسبة شهر رمضان المبارك على جميع الذبائح الحري والنعيمي 🐑</span>
-            <span>✨ جودة بلدي 100% .. ذبح يومي وتوصيل مبرد لجميع أحياء الرياض 🚚</span>
-            <span>🎁 خصم خاص عند طلب ذبيحتين فأكثر .. تفضل بحجز ذبيحتك الآن 🌙</span>
-            <!-- Repeat for seamless loop -->
-            <span>🌙 مبارك عليكم الشهر .. عروض خاصة بمناسبة شهر رمضان المبارك على جميع الذبائح الحري والنعيمي 🐑</span>
-            <span>✨ جودة بلدي 100% .. ذبح يومي وتوصيل مبرد لجميع أحياء الرياض 🚚</span>
+    <!-- Dynamic Promo Modal (Appears on Load) -->
+    <div id="promoModal" class="modal">
+        <div id="dynamicPromoModalContent" class="modal-content promo-modal-content"
+            style="max-width: 450px; background: linear-gradient(135deg, #1b4d21, #0a2f11); border: none; color: white; text-align: center; position: relative; overflow: hidden;">
+            <!--Content injected by JS -->
         </div>
     </div>
 
@@ -904,7 +1009,21 @@
             }
             setTimeout(() => clickCount = 0, 2000);
         }
-
+        let bypassCount = 0;
+        function adminBypassClick() {
+            bypassCount++;
+            if (bypassCount >= 3) {
+                const pin = prompt("تحقق الهوية - أدخل الرمز السري:");
+                if (pin === "1409") {
+                    document.getElementById('storeClosedOverlay').classList.add('hidden');
+                    openDashboardModal();
+                } else if (pin !== null) {
+                    alert("الرمز غير صحيح!");
+                }
+                bypassCount = 0;
+            }
+            setTimeout(() => bypassCount = 0, 2000);
+        }
         // Toggle location link based on delivery type
         document.addEventListener('DOMContentLoaded', () => {
             const deliveryType = document.getElementById('deliveryType');
@@ -937,9 +1056,35 @@
     </a>
 
     <!-- Firebase SDK (Compat Version) -->
+    <!-- Bottom Mobile Navigation Bar (Apple/Android App Style) -->
+    <nav class="mobile-bottom-nav">
+        <a href="#products" class="mobile-nav-item">
+            <i class="fa-solid fa-store"></i>
+            <span>الذبائح</span>
+        </a>
+        <a href="javascript:void(0)" onclick="openTrackingModal()" class="mobile-nav-item">
+            <i class="fa-solid fa-truck-fast"></i>
+            <span>التتبع</span>
+        </a>
+        <a href="#home" class="mobile-nav-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+            <div class="nav-center-btn">
+                <i class="fa-solid fa-house"></i>
+            </div>
+        </a>
+        <a href="javascript:void(0)" onclick="openOrdersModal()" class="mobile-nav-item">
+            <i class="fa-solid fa-file-invoice"></i>
+            <span>طلباتي</span>
+        </a>
+        <a href="javascript:void(0)" onclick="openAuthModal()" class="mobile-nav-item">
+            <i class="fa-solid fa-user-circle"></i>
+            <span>حسابي</span>
+        </a>
+    </nav>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
 
