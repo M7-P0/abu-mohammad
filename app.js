@@ -1732,14 +1732,14 @@ function initSeasonalPromo() {
         }
     } catch (e) { console.log("Hijri Detection Failed, using Gregorian Fallback"); }
 
-    // 2. Gregorian Fallback for 2026 (Safety Net)
+    // 2. Gregorian Fallback for 2026 (Refined)
     if (!hijriSuccess && gYear === 2026) {
-        // Feb 18 - Mar 15: Ramadan
-        if ((gMonth === 1 && gDate >= 18) || (gMonth === 2 && gDate <= 15)) season = 'ramadan';
-        // Mar 16 - Mar 25: Eid al-Fitr Prep & Days
-        else if (gMonth === 2 && (gDate >= 16 && gDate <= 25)) season = 'eid-fitr';
+        // Feb 18 - March 19: Ramadan
+        if ((gMonth === 1 && gDate >= 18) || (gMonth === 2 && gDate <= 19)) season = 'ramadan';
+        // March 20 - March 30: Eid al-Fitr
+        else if (gMonth === 2 && (gDate >= 20 && gDate <= 30)) season = 'eid-fitr';
         // June 2026: Eid al-Adha
-        else if (gMonth === 5 && (gDate >= 1 && gDate <= 10)) season = 'eid-adha';
+        else if (gMonth === 5 && (gDate >= 1 && gDate <= 20)) season = 'eid-adha';
     }
 
     const tickerItems = {
@@ -1767,63 +1767,70 @@ function initSeasonalPromo() {
 
     const modalContent = {
         'ramadan': `
-            <div style="position: absolute; top:-20px; right:-20px; opacity:0.2; font-size:5rem;">🌙</div>
-            <span class="close-modal" onclick="closePromoModal()">&times;</span>
-            <div style="margin-top:20px; margin-bottom:25px;">
-                <i class="fa-solid fa-moon-stars" style="font-size:3rem; color:#D4AF37;"></i>
-                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">رمضان كريم مبارك 🌙</h2>
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.1; font-size:6rem; color:#D4AF37;">🌙</div>
+            <span class="close-modal" onclick="closePromoModal()" style="font-size:2rem; color:white;">&times;</span>
+            <div style="margin-top:25px; margin-bottom:25px;">
+                <div style="width: 80px; height: 80px; background: rgba(212,175,55,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fa-solid fa-moon-stars" style="font-size:2.5rem; color:#D4AF37;"></i>
+                </div>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px; font-size: 1.8rem;">مبارك عليكم رمضان 🌙</h2>
             </div>
-            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
-                <p>عروض خاصة بمناسبة شهر رمضان المبارك على جميع الذبائح 🐏</p>
-                <div style="background:rgba(212,175,55,0.15); padding:10px; border-radius:12px; margin-top:15px;">
-                    <p style="margin:0;">🎁 خصم خاص عند طلب ذبيحتين فأكثر</p>
+            <div class="promo-body" style="font-size:1.2rem; line-height:1.6; margin-bottom:30px; font-weight:700;">
+                <p>كل عام وأنتم بخير.. عروض خاصة على الذبائح البلدية طوال الشهر الفضيل 🐏</p>
+                <div style="background:rgba(212,175,55,0.1); border: 1px dashed #D4AF37; padding:15px; border-radius:15px; margin-top:20px;">
+                    <p style="margin:0; color: #FFC857;">🎁 خصم خاص عند طلب ذبيحتين فأكثر</p>
                 </div>
             </div>
-            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#D4AF37; color:#1b4d21; font-weight:900;">تصفح العروض الآن ✨</button>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background: linear-gradient(135deg, #D4AF37, #b8912d); color:#1b4d21; font-weight:900; height: 55px; font-size: 1.1rem; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">تصفح القائمة الرمضانية ✨</button>
         `,
         'eid-fitr': `
-            <div style="position: absolute; top:-20px; right:-20px; opacity:0.15; font-size:5rem;">✨</div>
-            <span class="close-modal" onclick="closePromoModal()">&times;</span>
-            <div style="margin-top:20px; margin-bottom:25px;">
-                <i class="fa-solid fa-gift" style="font-size:3rem; color:#D4AF37;"></i>
-                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">عيدكم مبارك 🎉</h2>
-                <h3 style="font-size:1.1rem; opacity:0.9;">وكل عام وأنتم بخير</h3>
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.1; font-size:6rem; color:#D4AF37;">✨</div>
+            <span class="close-modal" onclick="closePromoModal()" style="font-size:2rem; color:white;">&times;</span>
+            <div style="margin-top:25px; margin-bottom:25px;">
+                <div style="width: 80px; height: 80px; background: rgba(212,175,55,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fa-solid fa-gift" style="font-size:2.5rem; color:#D4AF37;"></i>
+                </div>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px; font-size: 1.8rem;">عيد فطر مبارك 🎉</h2>
             </div>
-            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
-                <p>بمناسبة عيد الفطر السعيد .. ذبائحنا جاهزة لضيوفكم 🐑</p>
-                <div style="background:rgba(212,175,55,0.15); padding:10px; border-radius:12px; margin-top:15px;">
-                    <p style="margin:0; font-weight:800;">🎁 عروض خاصة لولائم العيد</p>
+            <div class="promo-body" style="font-size:1.2rem; line-height:1.6; margin-bottom:30px; font-weight:700;">
+                <p>تقبل الله منا ومنكم صالح الأعمال.. عيدنا غير مع ذبائح "ابو محمد" 🐏</p>
+                <div style="background:rgba(212,175,55,0.1); border: 1px dashed #D4AF37; padding:15px; border-radius:15px; margin-top:20px;">
+                    <p style="margin:0; color: #FFC857;">🎁 عروض خاصة لولائم العيد السعيد</p>
                 </div>
             </div>
-            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#D4AF37; color:#1b4d21; font-weight:900;">اطلب ذبيحة العيد الآن 🐏</button>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background: linear-gradient(135deg, #D4AF37, #b8912d); color:#1b4d21; font-weight:900; height: 55px; font-size: 1.1rem; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">اطلب ذبيحة العيد الآن 🐏</button>
         `,
         'eid-adha': `
-            <div style="position: absolute; top:-20px; right:-20px; opacity:0.15; font-size:5rem;">🐑</div>
-            <span class="close-modal" onclick="closePromoModal()">&times;</span>
-            <div style="margin-top:20px; margin-bottom:25px;">
-                <i class="fa-solid fa-kaaba" style="font-size:3rem; color:#D4AF37;"></i>
-                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">أضاحي العيد 🐑</h2>
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.1; font-size:6rem; color:#D4AF37;">🐑</div>
+            <span class="close-modal" onclick="closePromoModal()" style="font-size:2rem; color:white;">&times;</span>
+            <div style="margin-top:25px; margin-bottom:25px;">
+                <div style="width: 80px; height: 80px; background: rgba(212,175,55,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fa-solid fa-kaaba" style="font-size:2.5rem; color:#D4AF37;"></i>
+                </div>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px; font-size: 1.8rem;">أضحيتك مباركة 🐑</h2>
             </div>
-            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
-                <p>افضل الخيارات للأضاحي البلدية (حري ونعيمي) 🐏</p>
-                <div style="background:rgba(212,175,55,0.15); padding:10px; border-radius:12px; margin-top:15px;">
-                    <p style="margin:0; font-weight:800;">📦 متاح الحجز المبكر والذبح والتوصيل</p>
+            <div class="promo-body" style="font-size:1.2rem; line-height:1.6; margin-bottom:30px; font-weight:700;">
+                <p>افضل الخيارات للأضاحي البلدية (حري ونعيمي) مطابقة للشروط الشرعية 🐏</p>
+                <div style="background:rgba(212,175,55,0.1); border: 1px dashed #D4AF37; padding:15px; border-radius:15px; margin-top:20px;">
+                    <p style="margin:0; color: #FFC857;">📦 متاح الحجز المبكر والذبح والتوسيم</p>
                 </div>
             </div>
-            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#2C5F2D; color:#fff; font-weight:900;">احجز أضحيتك الآن ✨</button>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background: linear-gradient(135deg, #D4AF37, #b8912d); color:#1b4d21; font-weight:900; height: 55px; font-size: 1.1rem; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">احجز أضحيتك الآن ✨</button>
         `,
         'general': `
-            <div style="position: absolute; top:-20px; right:-20px; opacity:0.1; font-size:5rem;">🐏</div>
-            <span class="close-modal" onclick="closePromoModal()">&times;</span>
-            <div style="margin-top:20px; margin-bottom:25px;">
-                <i class="fa-solid fa-star" style="font-size:3rem; color:#D4AF37;"></i>
-                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px;">نؤمن بيوتكم بأجود الذبائح 🐏</h2>
+            <div style="position: absolute; top:-20px; right:-20px; opacity:0.1; font-size:6rem; color:#D4AF37;">🐑</div>
+            <span class="close-modal" onclick="closePromoModal()" style="font-size:2rem; color:white;">&times;</span>
+            <div style="margin-top:25px; margin-bottom:25px;">
+                <div style="width: 80px; height: 80px; background: rgba(212,175,55,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fa-solid fa-star" style="font-size:2.5rem; color:#D4AF37;"></i>
+                </div>
+                <h2 style="font-weight:900; color:#D4AF37; margin-top:10px; font-size: 1.8rem;">جودة تبيض وجهك 🐏</h2>
             </div>
-            <div class="promo-body" style="font-size:1.1rem; line-height:1.8; margin-bottom:30px;">
-                <p>كل أسبوع عروض جديدة على الحري والنعيمي والنجدي ✨</p>
-                <p>ذبح يومي وتوصيل مبرد سريع لجميع أحياء الرياض 🚚</p>
+            <div class="promo-body" style="font-size:1.2rem; line-height:1.6; margin-bottom:30px; font-weight:700;">
+                <p>نؤمن بيوتكم بأجود الذبائح البلدية الطازجة يومياً ✨</p>
+                <p style="font-size: 1rem; opacity: 0.9;">ذبح يومي وتوصيل مبرد سريع لجميع أحياء الرياض 🚚</p>
             </div>
-            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background:#D4AF37; color:#1b4d21; font-weight:900;">ابدأ اختيار ذبيحتك 🚀</button>
+            <button onclick="closePromoModal()" class="btn btn-primary full-width" style="background: linear-gradient(135deg, #D4AF37, #b8912d); color:#1b4d21; font-weight:900; height: 55px; font-size: 1.1rem; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">تصفح القائمة الآن 🚀</button>
         `
     };
 
@@ -1844,16 +1851,13 @@ function initSeasonalPromo() {
         modalContainer.innerHTML = modalContent[season] || modalContent['general'];
     }
 
-    // Show on load logic (refined per season)
-    const sessionKey = `promoShown_${season}_${hYear}`;
-    if (!sessionStorage.getItem(sessionKey)) {
+    // Show on load logic (Show every time during test if not dismissed in current tab)
+    const pModal = document.getElementById('promoModal');
+    if (pModal) {
         setTimeout(() => {
-            const pModal = document.getElementById('promoModal');
-            if (pModal) {
-                pModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-        }, 1500);
+            pModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }, 1200);
     }
 }
 
